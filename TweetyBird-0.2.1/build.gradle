@@ -1,0 +1,103 @@
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'com.android.tools.build:gradle:8.7.0'
+  }
+}
+
+plugins {
+  id 'base'
+  id 'com.vanniktech.maven.publish' version '0.30.0'
+  id 'signing'
+}
+apply plugin: 'com.android.library'
+
+import com.vanniktech.maven.publish.SonatypeHost
+import groovy.json.JsonSlurper
+
+android {
+  namespace 'dev.narlyx.tweetybird'
+  compileSdk 34
+
+  defaultConfig {
+    minSdk 24
+
+    consumerProguardFiles 'consumer-rules.pro'
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+  }
+    compileOptions {
+    sourceCompatibility JavaVersion.VERSION_11
+    targetCompatibility JavaVersion.VERSION_11
+  }
+}
+
+repositories {
+  mavenCentral()
+  google() // Needed for androidx
+}
+
+dependencies {
+  implementation 'org.firstinspires.ftc:RobotCore:10.1.1'
+  implementation 'org.firstinspires.ftc:Hardware:10.1.1'
+  implementation 'org.jetbrains:annotations:23.0.0'
+  testImplementation 'junit:junit:4.12'
+}
+
+
+mavenPublishing {
+  publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+
+  signAllPublications()
+
+  def apiUrl = new URL('https://api.github.com/repos/narlyx/tweetybird/releases/latest')
+  def connection = apiUrl.openConnection() as HttpURLConnection
+  connection.requestMethod = 'GET'
+  connection.setRequestProperty('Accept', 'application/vnd.github.v3+json')
+
+  try {
+    if (connection.responseCode == 200) {
+      def releaseInfo = new JsonSlurper().parse(connection.inputStream)
+
+      coordinates("dev.narlyx", "tweetybird", releaseInfo.tag_name.substring(1))
+    } else {
+      throw new GradleException("Failed to fetch remote release. Status: ${connection.responseCode}")
+    }
+  } finally {
+    connection.disconnect()
+  }
+
+  pom {
+    name = "TweetyBird"
+    description = "An easy to use java movement algorithm designed for FTC"
+    inceptionYear = "2023"
+    url = "https://github.com/narlyx/tweetybird/"
+    licenses {
+      license {
+        name = "The Apache License, Version 2.0"
+        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        distribution = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+      }
+    }
+    developers {
+      developer {
+        id = "narlyx"
+        name = "Narlyx"
+        url = "https://github.com/narlyx/"
+      }
+    }
+    scm {
+      url = "https://github.com/narlyx/tweetybird/"
+      connection = "scm:git:git://github.com/narlyx/tweetybird.git"
+      developerConnection = "scm:git:ssh://git@github.com/narlyx/tweetybird.git"
+    }
+  }
+}
