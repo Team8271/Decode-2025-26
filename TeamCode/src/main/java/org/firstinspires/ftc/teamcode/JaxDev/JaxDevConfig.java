@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
@@ -31,7 +32,16 @@ public class JaxDevConfig {
     public Limelight3A limelight;
 
     // Variables
-    private final int limelightObeliskPipeline = 0;
+    private final int   limelightLocalizationPipeline   = 0,
+                        limelightObeliskPipeline        = 1,
+                        limelightRedPipeline            = 2,
+                        limelightBluePipeline           = 3;
+
+    public boolean goalAnglesAreValid;
+    public double goalTx;
+    public double goalTy;
+    public Motif motif;
+
 
     // enums
     public enum Motif {
@@ -40,6 +50,11 @@ public class JaxDevConfig {
         PPG,    // AprilTag 23
         NULL;
     }
+    public enum Team {
+        RED,
+        BLUE;
+    }
+    Team team;
 
     // TweetyBird Classes
     public ThreeWheeled odometer;
@@ -51,6 +66,9 @@ public class JaxDevConfig {
 
     /// Initialization Method
     public void init(){
+        motif = Motif.NULL;
+        setTeam(Team.BLUE);
+
         // Shorten HardwareMap for frequent use
         HardwareMap hwMap = opMode.hardwareMap;
 
@@ -113,13 +131,16 @@ public class JaxDevConfig {
                 .build();
     }
 
-    /// Initializes TweetyBird
+    /// Set team color.
+    public void setTeam(Team team){this.team = team;}
+
+    /// Initializes TweetyBird.
     public void initTweetyBird(){
         tweetyBird = new TweetyBird.Builder()
                 .setDistanceBuffer(1) // Inch(es)
                 .setDriver(mecanum)
                 .setLinearOpMode(opMode)
-                .setMaximumSpeed(0.7)
+                .setMaximumSpeed(0.5)
                 .setMinimumSpeed(0.4)
                 .setOdometer(odometer)
                 .setRotationBuffer(4) // Degree(s)
@@ -127,13 +148,10 @@ public class JaxDevConfig {
                 .build();
     }
 
-    /**
-     * Uses Limelight to detect Obelisk Motif pattern and returns result.
-     *
-     * @return Valid Motif or Motif.NULL
-     */
-    public Motif scanObelisk(){
+    /// Uses Limelight to detect Obelisk Motif pattern and updates Motif.motif.
+    public void scanObelisk(){
         int aprilTag = 0;
+        Motif tempMotif;
 
         if(!limelight.isRunning()){
             limelight.start();
@@ -151,14 +169,60 @@ public class JaxDevConfig {
 
         switch(aprilTag){
             case(21):
-                return Motif.GPP;
+                tempMotif = Motif.GPP;
+                break;
             case(22):
-                return Motif.PGP;
+                tempMotif = Motif.PGP;
+                break;
             case(23):
-                return Motif.PPG;
+                tempMotif = Motif.PPG;
+                break;
             default:
-                return Motif.NULL;
+                tempMotif = Motif.NULL;
+                break;
+        }
+        if(tempMotif != Motif.NULL){
+            motif = tempMotif;
+        }
 
+    }
+
+    /// Uses Limelight to detect Goal angle and update goalTx and goalTy.
+    public void scanGoalAngle(){
+        int desiredPipeline;
+
+        // Ensure polling for limelight data
+        if(!limelight.isRunning()){
+            limelight.start();
+        }
+
+        // Set desired pipeline
+        switch(team){
+            case BLUE:
+                desiredPipeline = limelightBluePipeline;
+                break;
+            case RED:
+                desiredPipeline = limelightRedPipeline;
+                break;
+            default:
+                desiredPipeline = 4;
+        }
+
+        // Set pipeline
+        if(limelight.getStatus().getPipelineIndex() != desiredPipeline){
+            limelight.pipelineSwitch(desiredPipeline);
+        }
+        // Get latest results
+        LLResult result = limelight.getLatestResult();
+
+        // Update angles
+        if(result != null && result.isValid()){
+            goalAnglesAreValid = true;
+            goalTx = result.getTx();
+            goalTy = result.getTy();
+        }
+        else{
+            goalAnglesAreValid = false;
         }
 
     }
