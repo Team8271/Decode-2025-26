@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 @Autonomous(name="JaxDevAuto", group="JaxDev")
 public class JaxDevAuto extends LinearOpMode {
     JaxDevConfig robot;
-    JaxDevConfig.Motif motif;
     JaxDevConfig.Motif curMotif;
 
     @Override
@@ -15,13 +14,14 @@ public class JaxDevAuto extends LinearOpMode {
         robot.init();
         robot.initTweetyBird();
 
-        telemetry.addData(">","Robot Ready.  Press Play.");
-
-        while(opModeInInit()){
-            motif = robot.scanObelisk();
-            telemetry.addData("Motif", motif);
+        while(opModeInInit() && !isStopRequested()){
+            telemetry.addData(">","Robot Ready.  Press Play.");
+            robot.scanObelisk();
+            telemetry.addData("Motif", robot.motif);
+            telemetry.update();
         }
         telemetry.update();
+
         waitForStart();
 
         // Move to Launch
@@ -29,21 +29,25 @@ public class JaxDevAuto extends LinearOpMode {
         // Launch Preloads
 
         // Scan Obelisk while moving towards spike marks
-        curMotif = robot.scanObelisk();
-        if(curMotif != JaxDevConfig.Motif.NULL){
-            motif=curMotif;
-        }
+        //robot.scanObelisk();
+        robot.tweetyBird.engage();
 
         // Grab artifacts from motif spike mark
-        switch(motif){
+        switch(robot.motif){
             case GPP:
                 // Grab GPP spike mark
+                robot.tweetyBird.addWaypoint(23,24,94);
+                robot.tweetyBird.waitWhileBusy();
                 break;
             case PGP:
                 // Grab PGP spike mark
+                robot.tweetyBird.addWaypoint(24,49,94);
+                robot.tweetyBird.waitWhileBusy();
                 break;
             case PPG:
                 // Grab PPG spike mark
+                robot.tweetyBird.addWaypoint(24,74,90);
+                robot.tweetyBird.waitWhileBusy();
                 break;
             case NULL:
                 // Grab PPG spike mark
