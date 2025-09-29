@@ -1,13 +1,17 @@
 package org.firstinspires.ftc.teamcode.JaxDev;
 
+import static com.google.blocks.ftcrobotcontroller.hardware.HardwareType.IMU;
+
 import android.bluetooth.le.ScanSettings;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.vision.VisionPortal;
@@ -30,6 +34,7 @@ public class JaxDevConfig {
 
     // Other Hardware
     public Limelight3A limelight;
+    public IMU imu;
 
     // Variables
     private final int   limelightLocalizationPipeline   = 0,
@@ -71,6 +76,14 @@ public class JaxDevConfig {
 
         // Shorten HardwareMap for frequent use
         HardwareMap hwMap = opMode.hardwareMap;
+
+        // IMU
+        imu = hwMap.get(IMU.class,"imu");
+        RevHubOrientationOnRobot.LogoFacingDirection logo = RevHubOrientationOnRobot.LogoFacingDirection.DOWN;
+        RevHubOrientationOnRobot.UsbFacingDirection usb = RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
+
+        RevHubOrientationOnRobot orientationOnRobot = new RevHubOrientationOnRobot(logo, usb);
+        imu.initialize(new IMU.Parameters(orientationOnRobot));
 
         // Front Left Drive
         fl = hwMap.get(DcMotor.class, "FL");
@@ -141,7 +154,7 @@ public class JaxDevConfig {
                 .setDriver(mecanum)
                 .setLinearOpMode(opMode)
                 .setMaximumSpeed(0.5)
-                .setMinimumSpeed(0.4)
+                .setMinimumSpeed(0.2)
                 .setOdometer(odometer)
                 .setRotationBuffer(4) // Degree(s)
                 .setLoggingEnabled(true)
