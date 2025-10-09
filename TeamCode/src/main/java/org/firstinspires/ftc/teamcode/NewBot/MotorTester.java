@@ -11,13 +11,13 @@ import java.util.ArrayList;
 public class MotorTester extends LinearOpMode {
 
     /// HardwareMap Reference
-    private Config robot = null;
+    private DevConfig robot = null;
 
     /// OpMode Start
     @Override
     public void runOpMode() {
-        robot = new Config(this);
-        robot.init();
+        robot = new DevConfig(this);
+        robot.devInit();
 
         telemetry.setAutoClear(false);
 
