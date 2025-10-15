@@ -8,21 +8,10 @@ import com.qualcomm.robotcore.util.Range;
 public class DevOp extends LinearOpMode {
     @Override
     public void runOpMode(){
-        DevConfig robot = new DevConfig(this);
-        robot.devInit();
+        Config robot = new Config(this);
+        robot.init();
         boolean debounce = false;
         double agitatorPower = 0;
-
-        double leftTiltStartingPos = robot.leftTilt.getPosition();
-        double rightTiltStartingPos = robot.rightTilt.getPosition();
-        robot.leftTilt.setPosition(leftTiltStartingPos);
-        robot.rightTilt.setPosition(rightTiltStartingPos);
-
-        telemetry.addData("LeftTilt Start",leftTiltStartingPos);
-        telemetry.addData("RightTilt Start",rightTiltStartingPos);
-
-        telemetry.addData("LeftTilt Pos", robot.leftTilt.getPosition());
-        telemetry.addData("RightTilt Pos", robot.rightTilt.getPosition());
 
         telemetry.addLine("Initialized");
         telemetry.update();
@@ -30,39 +19,71 @@ public class DevOp extends LinearOpMode {
         waitForStart();
 
         while(opModeIsActive()){
-            double launcherControl = gamepad2.right_stick_y;
+            // Driver 1 Controls
+            double axialControl = -gamepad1.left_stick_y;  // y axis
+            double lateralControl = gamepad1.left_stick_x; // x axis
+            double yawControl = gamepad1.right_stick_x;    // z axis
+            double mainThrottle = .2+(gamepad1.right_trigger*0.8); // throttle
+            boolean resetFCD = gamepad1.dpad_up; // z axis reset
 
-            double launcherPower = Range.clip(launcherControl,-1,1);
-            robot.leftLauncher.setPower(launcherPower);
-            robot.rightLauncher.setPower(launcherPower);
+            // Driver 2 Controls
+            boolean launchArtifactControl = gamepad2.a;
+            boolean activateAgitator = gamepad2.b;
 
 
-            if(gamepad1.a && !debounce){
-                if(agitatorPower == 0){
-                    agitatorPower = 1;
-                }
-                else{
+            if(launchArtifactControl){
+                robot.launcherThread.launchOneArtifact();
+            }
+
+
+            if(activateAgitator && !debounce){
+                if(agitatorPower == 1){
                     agitatorPower = 0;
                 }
-                robot.agitator.setPower(agitatorPower);
+                else {
+                    agitatorPower = 1;
+                }
                 debounce = true;
             }
 
-            if(!gamepad1.a && debounce){
-                debounce = false;
+            if(robot.intakeServo.getPosition() != 1){
+                robot.intakeServo.setPosition(1);
             }
 
 
-            robot.leftTilt.setPosition(robot.leftTilt.getPosition());
-            robot.rightTilt.setPosition(robot.rightTilt.getPosition());
+            if(!activateAgitator && debounce){
+                debounce = false;
+            }
 
-            telemetry.addData("Launcher Power", launcherPower);
+            robot.agitator.setPower(agitatorPower);
 
-            telemetry.addData("LeftTilt Start",leftTiltStartingPos);
-            telemetry.addData("RightTilt Start",rightTiltStartingPos);
 
-            telemetry.addData("LeftTilt Pos", robot.leftTilt.getPosition());
-            telemetry.addData("RightTilt Pos", robot.rightTilt.getPosition());
+            // FCD reset
+            if(resetFCD){
+                robot.odometer.resetTo(0,0,180);
+            }
+
+            // Calculate drive train power for field centric
+            double gamepadRadians = Math.atan2(lateralControl, axialControl);
+            double gamepadHypot = Range.clip(Math.hypot(lateralControl, axialControl), 0, 1);
+            double robotRadians = -robot.odometer.getZ();
+            double targetRadians = gamepadRadians + robotRadians;
+            double lateral = Math.sin(targetRadians)*gamepadHypot;
+            double axial = Math.cos(targetRadians)*gamepadHypot;
+
+            double leftFrontPower = axial + lateral + yawControl;
+            double rightFrontPower = axial - lateral - yawControl;
+            double leftBackPower = axial - lateral + yawControl;
+            double rightBackPower = axial + lateral - yawControl;
+
+            // Calculate and send power to drivetrain
+            robot.fl.setPower(leftFrontPower * mainThrottle);
+            robot.fr.setPower(rightFrontPower * mainThrottle);
+            robot.bl.setPower(leftBackPower * mainThrottle);
+            robot.br.setPower(rightBackPower * mainThrottle);
+
+            telemetry.addData("KickerServo Position", robot.kickerServo.getPosition());
+
             telemetry.update();
         }
     }
