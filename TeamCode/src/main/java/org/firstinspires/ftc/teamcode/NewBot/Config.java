@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.Range;
 
 import java.util.List;
 
@@ -20,8 +21,18 @@ import dev.narlyx.tweetybird.TweetyBird;
 /// Configuration class
 public class Config {
 
+    // Changeable Power Values
+    public final double kickerIdlePower = 0.3, kickerOnPower = 1,
+        storeKickerPosition = 0.5, activeKickerPosition = 1,
+        agitatorActivePower = 1;
+
+
+
+    // This value will be changed with Limelight sensing to get the ideal power
+    public double idealLauncherPower = 1;
+
     // Reference to opMode class
-    private final LinearOpMode opMode;
+    public final LinearOpMode opMode;
 
     // Define Motors
     public DcMotor fl, fr, bl, br,
@@ -46,6 +57,7 @@ public class Config {
     public double goalTy;
     private Motif motif;
     public LauncherThread launcherThread;
+    public KickerThread kickerThread;
 
     // enums
     public enum Motif {
@@ -67,34 +79,6 @@ public class Config {
 
     // Pass opMode to config
     public Config(LinearOpMode opMode){this.opMode = opMode;}
-
-    public void devInit(){
-        // Shorten HardwareMap for frequent use
-        HardwareMap hwMap = opMode.hardwareMap;
-
-
-        // Motor used in the Active Agitator module
-        agitator = hwMap.get(DcMotor.class, "agitator");
-        agitator.setDirection(DcMotorSimple.Direction.FORWARD);
-        agitator.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        agitator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        // Robot Facing Left Launcher Motor
-        leftLauncher = hwMap.get(DcMotor.class, "leftLauncher");
-        leftLauncher.setDirection(DcMotorSimple.Direction.FORWARD);
-        leftLauncher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        leftLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        // Robot Facing Right Launcher Motor
-        rightLauncher = hwMap.get(DcMotor.class, "rightLauncher");
-        rightLauncher.setDirection(DcMotorSimple.Direction.FORWARD);
-        rightLauncher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        rightLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        // Tilt Servos - Used to angle projectile
-        leftTilt = hwMap.get(Servo.class, "leftTilt");
-        rightTilt = hwMap.get(Servo.class, "rightTilt");
-    }
 
     /// Initialization Method
     public void init(){
@@ -166,7 +150,18 @@ public class Config {
 
         // Kicker Servo - Transfers artifacts from agitator to launcher
         kickerServo = hwMap.get(Servo.class, "kickerServo");
+        kickerServo.setPosition(storeKickerPosition);
         intakeServo = hwMap.get(Servo.class, "intakeServo");
+
+        // Launcher Multithreading
+        launcherThread = new LauncherThread();
+        launcherThread.setConfig(this);
+        launcherThread.start();
+
+        // Kicker Multithreading
+        kickerThread = new KickerThread();
+        kickerThread.setConfig(this);
+        kickerThread.start();
 
 
         // Tilt Servos - Used to angle projectile
@@ -176,10 +171,6 @@ public class Config {
         // Limelight3A Camera
         // limelight = hwMap.get(Limelight3A.class, "limelight");
         // opMode.telemetry.setMsTransmissionInterval(11);
-
-        launcherThread = new LauncherThread();
-        launcherThread.setConfig(this);
-        launcherThread.start();
 
 
         // Build drivetrain for TweetyBird Use
@@ -224,11 +215,6 @@ public class Config {
         odometer.resetTo(0,0,180);
     }
 
-    public void setLauncherPower(double power){
-        leftLauncher.setPower(power);
-        rightLauncher.setPower(power);
-    }
-
     /// Set team for launching system etc.
     public void setTeam(Team team){this.team = team;}
 
@@ -271,6 +257,7 @@ public class Config {
 
     }
 
+    /// @return The last recognised motif.
     public Motif getMotif(){return motif;}
 
     /// Uses Limelight to detect Goal angle and update goalTx and goalTy.
@@ -314,35 +301,162 @@ public class Config {
 
     }
 
+    public void increaseLauncherPower(){
+        idealLauncherPower = Range.clip(idealLauncherPower + .1,0.1,1);
+    }
+
+    public void decreaseLauncherPower(){
+        idealLauncherPower = Range.clip(idealLauncherPower - .1,0.1,1);
+    }
 }
 
-class LauncherThread extends Thread{
-    boolean isRunning = false;
-    boolean hasConfig = false;
+/**
+ * Thread class used to control the kicker.
+ * Must be provided a Config using 'setConfig().'
+ */
+class KickerThread extends Thread{
     Config robot;
-    public void setConfig(Config robot){this.robot = robot; hasConfig = true;}
-    public void run(){
-        isRunning = true;
-        System.out.println("Thread is running: " + Thread.currentThread().getName());
+    public void setConfig(Config robot){this.robot = robot;}
 
-    }
-    public void launchOneArtifact(){
-        if(hasConfig){
-            try {
-                if(!isRunning){
-                    start();
+    private boolean toIdle = false;
+    private boolean toActive = false;
+
+    private volatile boolean running = true; // When false, thread terminates
+
+    @Override
+    public void run(){
+        while(running){
+            synchronized (this) {
+                try {
+                    wait(); // Sleep until notified (Save resources)
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
                 }
-                robot.setLauncherPower(1);
-                robot.kickerMotor.setPower(1);
-                sleep(100);
-                robot.kickerServo.setPosition(1);
-                sleep(700);
-                robot.setLauncherPower(0);
-                robot.kickerMotor.setPower(0);
-                robot.kickerServo.setPosition(0.5);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
+
+            if (!running) break; // check before doing work
+
+            if(toIdle){
+                doIdle();
+                toIdle = false;
+            }
+
+            if(toActive){
+                doActive();
+                toActive = false;
+            }
+
         }
+    }
+
+    /// Terminates the thread
+    public void terminate(){
+        running = false;
+        notify();
+    }
+
+    private void doIdle(){
+        robot.kickerMotor.setPower(robot.kickerIdlePower);
+        robot.kickerServo.setPosition(robot.storeKickerPosition);
+    }
+
+    private void doActive(){
+        try {
+            robot.kickerMotor.setPower(robot.kickerOnPower);
+            Thread.sleep(100); // Wait for motor to ramp up
+            robot.kickerServo.setPosition(robot.activeKickerPosition);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /// Move the kicker into the idle position and set idle power
+    public synchronized void setIdle(){
+        toIdle = true;
+        notify();
+    }
+
+    /// Move the kicker into the active position and set active power
+    public synchronized void setActive(){
+        toActive = true;
+        notify();
+    }
+
+}
+
+/**
+ * Thread class used to launch artifacts.
+ * Must be provided a Config using 'setConfig().'
+ */
+class LauncherThread extends Thread{
+    Config robot;
+    public void setConfig(Config robot){this.robot = robot;}
+
+    private int artifactsToLaunch = 0;
+
+    private volatile boolean running = true; // When false, thread terminates
+
+    @Override
+    public void run(){
+        while(running){
+            synchronized (this) {
+                try {
+                    wait(); // Sleep until notified (Save resources)
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+
+            if (!running) break; // check before doing work
+
+            doLaunch(artifactsToLaunch);
+
+        }
+    }
+
+    private void setLauncherPower(double power){
+        robot.leftLauncher.setPower(power);
+        robot.rightLauncher.setPower(power);
+    }
+
+    private void doLaunch(int artifactsToLaunch){
+        try {
+            double agitatorStartPower = robot.agitator.getPower();
+
+            robot.agitator.setPower(robot.agitatorActivePower);
+
+            setLauncherPower(robot.idealLauncherPower);
+            robot.kickerMotor.setPower(robot.kickerOnPower);
+            sleep(200); // Ramp up motors
+            robot.kickerServo.setPosition(robot.activeKickerPosition);
+            sleep(700);
+            // Artifact One fully exited
+            for(int i = 1; i <artifactsToLaunch; i++){
+                robot.kickerServo.setPosition(robot.storeKickerPosition);
+                sleep(400); // Waiting for artifact to clear kicker
+                robot.kickerServo.setPosition(robot.activeKickerPosition);
+                sleep(700); // Artifact X fully exited
+            }
+
+            // Go to IDLE mode
+            robot.kickerServo.setPosition(robot.storeKickerPosition);
+            robot.kickerMotor.setPower(robot.kickerIdlePower);
+            setLauncherPower(0);
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public synchronized void terminate(){
+        running = false;
+        notify();
+    }
+
+    public synchronized void launch(int artifactsToLaunch){
+        this.artifactsToLaunch = artifactsToLaunch;
+        notify();
     }
 }
