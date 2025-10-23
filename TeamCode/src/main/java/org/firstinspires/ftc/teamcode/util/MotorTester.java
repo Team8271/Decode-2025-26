@@ -4,6 +4,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
+import org.firstinspires.ftc.teamcode.robot.Config;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 
@@ -11,13 +13,13 @@ import java.util.ArrayList;
 public class MotorTester extends LinearOpMode {
 
     /// HardwareMap Reference
-    private DevConfig robot = null;
+    private Config robot = null;
 
     /// OpMode Start
     @Override
     public void runOpMode() {
-        robot = new DevConfig(this);
-        robot.devInit();
+        robot = new Config(this);
+        robot.init();
 
         telemetry.setAutoClear(false);
 
