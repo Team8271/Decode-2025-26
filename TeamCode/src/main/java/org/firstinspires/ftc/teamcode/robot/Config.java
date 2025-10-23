@@ -26,7 +26,7 @@ public class Config {
         storeKickerPosition = 0.5, activeKickerPosition = 1,
         agitatorActivePower = 1;
 
-
+    public final int motorRampUpTime = 200;
 
     // This value will be changed with Limelight sensing to get the ideal power
     public double idealLauncherPower = 1;
@@ -364,7 +364,7 @@ class KickerThread extends Thread{
     private void doActive(){
         try {
             robot.kickerMotor.setPower(robot.kickerOnPower);
-            Thread.sleep(100); // Wait for motor to ramp up
+            Thread.sleep(motorRampUpTime); // Wait for motor to ramp up
             robot.kickerServo.setPosition(robot.activeKickerPosition);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
