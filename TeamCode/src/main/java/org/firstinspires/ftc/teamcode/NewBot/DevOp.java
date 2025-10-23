@@ -11,12 +11,16 @@ public class DevOp extends LinearOpMode {
         Config robot = new Config(this);
         robot.init();
         boolean debounce = false;
+        boolean launcherDebounce = false;
         double agitatorPower = 0;
+        double intakeServoTarget = 0.5;
 
         telemetry.addLine("Initialized");
         telemetry.update();
 
         waitForStart();
+
+        robot.kickerMotor.setPower(robot.kickerIdlePower);
 
         while(opModeIsActive()){
             // Driver 1 Controls
@@ -27,35 +31,54 @@ public class DevOp extends LinearOpMode {
             boolean resetFCD = gamepad1.dpad_up; // z axis reset
 
             // Driver 2 Controls
-            boolean launchArtifactControl = gamepad2.a;
-            boolean activateAgitator = gamepad2.b;
+            boolean launchOneArtifact = gamepad2.a;
+            boolean launchTwoArtifacts = gamepad2.y;
+            boolean activateAgitatorAssembly = gamepad2.b;
+
+            boolean increaseLauncherPower = gamepad2.dpad_up;
+            boolean decreaseLauncherPower = gamepad2.dpad_down;
 
 
-            if(launchArtifactControl){
-                robot.launcherThread.launchOneArtifact();
+            if(launchOneArtifact){
+                robot.launcherThread.launch(1);
+            }
+            if(launchTwoArtifacts){
+                robot.launcherThread.launch(3);
+            }
+
+            // Dev launcher adjustments, to be handled with a limelight blackbox
+            if(increaseLauncherPower && !launcherDebounce){
+                robot.increaseLauncherPower();
+                launcherDebounce = true;
+            }
+            if(decreaseLauncherPower && !launcherDebounce){
+                robot.decreaseLauncherPower();
+                launcherDebounce = true;
+            }
+            if(!increaseLauncherPower && !decreaseLauncherPower && launcherDebounce){
+                debounce = false;
             }
 
 
-            if(activateAgitator && !debounce){
+            if(activateAgitatorAssembly && !debounce){
                 if(agitatorPower == 1){
                     agitatorPower = 0;
+                    intakeServoTarget = 0.5;
                 }
                 else {
                     agitatorPower = 1;
+                    intakeServoTarget = 1;
                 }
                 debounce = true;
             }
 
-            if(robot.intakeServo.getPosition() != 1){
-                robot.intakeServo.setPosition(1);
-            }
 
-
-            if(!activateAgitator && debounce){
+            if(!activateAgitatorAssembly && debounce){
                 debounce = false;
             }
 
             robot.agitator.setPower(agitatorPower);
+            robot.intakeServo.setPosition(intakeServoTarget);
 
 
             // FCD reset
@@ -82,7 +105,26 @@ public class DevOp extends LinearOpMode {
             robot.bl.setPower(leftBackPower * mainThrottle);
             robot.br.setPower(rightBackPower * mainThrottle);
 
-            telemetry.addData("KickerServo Position", robot.kickerServo.getPosition());
+
+            telemetry.addData("Kicker Thread Alive", robot.kickerThread.isAlive());
+            telemetry.addData("Launcher Thread Alive", robot.launcherThread.isAlive());
+            telemetry.addData("Launcher Power", robot.idealLauncherPower);
+            telemetry.addData("\nTx", robot.goalTx);
+            telemetry.addData("Ty", robot.goalTy);
+
+            telemetry.addLine("\n\nControls:\n" +
+                    "  Gamepad1:\n" +
+                    "    Axial Control - Left Stick Y\n" +
+                    "    Lateral Control - Left Stick X\n" +
+                    "    Yaw Control - Right Stick X\n" +
+                    "    Throttle - Right Trigger\n" +
+                    "    FCD Reset - dPad Up\n" +
+                    "  Gamepad2:\n" +
+                    "    Launch One Artifact - A\n" +
+                    "    Launch Three Artifacts - Y\n" +
+                    "    Agitator Assembly - B\n" +
+                    "    Increase Launcher Power - dPad Up\n" +
+                    "    Decrease Launcher Power - dPad Down");
 
             telemetry.update();
         }
