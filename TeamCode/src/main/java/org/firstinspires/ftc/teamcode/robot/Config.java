@@ -429,7 +429,7 @@ class LauncherThread extends Thread{
 
             setLauncherPower(robot.idealLauncherPower);
             robot.kickerMotor.setPower(robot.kickerOnPower);
-            sleep(200); // Ramp up motors
+            sleep(motorRampUpTime); // Ramp up motors
             robot.kickerServo.setPosition(robot.activeKickerPosition);
             sleep(700);
             // Artifact One fully exited
