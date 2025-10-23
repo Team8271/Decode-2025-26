@@ -364,7 +364,7 @@ class KickerThread extends Thread{
     private void doActive(){
         try {
             robot.kickerMotor.setPower(robot.kickerOnPower);
-            Thread.sleep(motorRampUpTime); // Wait for motor to ramp up
+            Thread.sleep(robot.motorRampUpTime); // Wait for motor to ramp up
             robot.kickerServo.setPosition(robot.activeKickerPosition);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -429,7 +429,7 @@ class LauncherThread extends Thread{
 
             setLauncherPower(robot.idealLauncherPower);
             robot.kickerMotor.setPower(robot.kickerOnPower);
-            sleep(motorRampUpTime); // Ramp up motors
+            sleep(robot.motorRampUpTime); // Ramp up motors
             robot.kickerServo.setPosition(robot.activeKickerPosition);
             sleep(700);
             // Artifact One fully exited
