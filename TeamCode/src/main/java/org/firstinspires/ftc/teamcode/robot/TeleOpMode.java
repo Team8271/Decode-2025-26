@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.Range;
 
 @TeleOp(name = "DevOp")
-public class DevOp extends LinearOpMode {
+public class TeleOpMode extends LinearOpMode {
     @Override
     public void runOpMode() {
         Config robot = new Config(this);
