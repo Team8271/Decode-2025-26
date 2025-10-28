@@ -106,7 +106,6 @@ public class TeleOpMode extends LinearOpMode {
             robot.br.setPower(rightBackPower * mainThrottle);
 
 
-            telemetry.addData("Kicker Thread Alive", robot.kickerThread.isAlive());
             telemetry.addData("Launcher Thread Alive", robot.launcherThread.isAlive());
             telemetry.addData("Launcher Power", robot.idealLauncherPower);
             telemetry.addData("\nTx", robot.goalTx);

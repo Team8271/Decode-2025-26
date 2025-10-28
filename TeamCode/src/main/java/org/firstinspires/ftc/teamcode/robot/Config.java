@@ -69,7 +69,6 @@ public class Config {
     public double goalTy;
     private Motif motif;
     public LauncherThread launcherThread;
-    public KickerThread kickerThread;
 
     // enums
     public enum Motif {
@@ -168,10 +167,6 @@ public class Config {
         // Launcher Multithreading
         launcherThread = new LauncherThread();
         launcherThread.setConfig(this);
-
-        // Kicker Multithreading
-        kickerThread = new KickerThread();
-        kickerThread.setConfig(this);
 
         // Starts Threads
         checkAndRestartThreads();
@@ -356,10 +351,6 @@ public class Config {
      * If not active, starts them.
      */
     public void checkAndRestartThreads() {
-        if (!kickerThread.isAlive()) {
-            log("Starting kickerThread");
-            kickerThread.start();
-        }
         if (!launcherThread.isAlive()) {
             log("Starting launcherThread");
             launcherThread.start();
@@ -373,87 +364,6 @@ public class Config {
             log("Failed to stop launcherThread");
             throw new RuntimeException(e);
         }
-        try {
-            kickerThread.terminate();
-        } catch (Exception e) {
-            log("Failed to stop kickerThread");
-            throw new RuntimeException(e);
-        }
-    }
-
-}
-
-/**
- * Thread class used to control the kicker.
- * Must be provided a Config using 'setConfig().'
- */
-class KickerThread extends Thread {
-    Config robot;
-    public void setConfig(Config robot) {this.robot = robot;}
-
-    private boolean toIdle = false;
-    private boolean toActive = false;
-
-    private volatile boolean running = true; // When false, thread terminates
-
-    @Override
-    public void run() {
-        while (running) {
-            synchronized (this) {
-                try {
-                    wait(); // Sleep until notified (Save resources)
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
-
-            if (!running) break; // check before doing work
-
-            if (toIdle) {
-                doIdle();
-                toIdle = false;
-            }
-
-            if (toActive) {
-                doActive();
-                toActive = false;
-            }
-
-        }
-    }
-
-    /// Terminates the thread
-    public void terminate() {
-        running = false;
-        notify();
-    }
-
-    private void doIdle() {
-        robot.kickerMotor.setPower(robot.kickerIdlePower);
-        robot.kickerServo.setPosition(robot.storeKickerPosition);
-    }
-
-    private void doActive() {
-        try {
-            robot.kickerMotor.setPower(robot.kickerOnPower);
-            Thread.sleep(robot.motorRampUpTime); // Wait for motor to ramp up
-            robot.kickerServo.setPosition(robot.activeKickerPosition);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    /// Move the kicker into the idle position and set idle power
-    public synchronized void setIdle() {
-        toIdle = true;
-        notify();
-    }
-
-    /// Move the kicker into the active position and set active power
-    public synchronized void setActive() {
-        toActive = true;
-        notify();
     }
 
 }
