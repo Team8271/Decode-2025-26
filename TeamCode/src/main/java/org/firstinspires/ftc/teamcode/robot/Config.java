@@ -336,6 +336,22 @@ public class Config {
             logWriter.newLine();
         } catch (IOException ignored) {}
     }
+
+    public void killThreads() {
+        try {
+            launcherThread.terminate();
+        } catch (Exception e) {
+            log("Failed to stop launcherThread");
+            throw new RuntimeException(e);
+        }
+        try {
+            kickerThread.terminate();
+        } catch (Exception e) {
+            log("Failed to stop kickerThread");
+            throw new RuntimeException(e);
+        }
+    }
+
 }
 
 /**
