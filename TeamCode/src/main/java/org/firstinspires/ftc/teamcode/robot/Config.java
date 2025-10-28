@@ -34,7 +34,7 @@ public class Config {
     protected BufferedWriter logWriter = null;
 
     // Changeable Power Values
-    public final double kickerIdlePower = 0.3, kickerOnPower = 1,
+    public final double kickerIdlePower = 0, kickerOnPower = 1,
         storeKickerPosition = 0.5, activeKickerPosition = 1,
         agitatorActivePower = 1;
 
