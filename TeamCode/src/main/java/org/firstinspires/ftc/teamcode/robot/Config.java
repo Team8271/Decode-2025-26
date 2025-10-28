@@ -90,10 +90,10 @@ public class Config {
     public TweetyBird tweetyBird;
 
     // Pass opMode to config
-    public Config(LinearOpMode opMode){this.opMode = opMode;}
+    public Config(LinearOpMode opMode) {this.opMode = opMode;}
 
     /// Initialization Method
-    public void init(){
+    public void init() {
         motif = Motif.NULL;
         setTeam(Team.BLUE);
 
@@ -164,7 +164,6 @@ public class Config {
         kickerServo = hwMap.get(Servo.class, "kickerServo");
         kickerServo.setPosition(storeKickerPosition);
         intakeServo = hwMap.get(Servo.class, "intakeServo");
-
         // Launcher Multithreading
         launcherThread = new LauncherThread();
         launcherThread.setConfig(this);
@@ -213,7 +212,7 @@ public class Config {
     }
 
     /// Initializes TweetyBird.
-    public void initTweetyBird(){
+    public void initTweetyBird() {
         tweetyBird = new TweetyBird.Builder()
                 .setDistanceBuffer(1) // Inch(es)
                 .setDriver(mecanum)
@@ -228,61 +227,61 @@ public class Config {
     }
 
     /// Set team for launching system etc.
-    public void setTeam(Team team){this.team = team;}
+    public void setTeam(Team team) {this.team = team;}
 
     /// Uses Limelight to detect Obelisk Motif pattern and updates Motif.motif.
-    public void scanObelisk(){
+    public void scanObelisk() {
         int aprilTag = 0;
         Motif tempMotif;
 
-        if(!limelight.isRunning()){
+        if (!limelight.isRunning()) {
             limelight.start();
         }
-        if(limelight.getStatus().getPipelineIndex() != limelightObeliskPipeline){
+        if (limelight.getStatus().getPipelineIndex() != limelightObeliskPipeline) {
             limelight.pipelineSwitch(limelightObeliskPipeline);
         }
         LLResult result = limelight.getLatestResult();
 
-        if(result != null && result.isValid()){
+        if (result != null && result.isValid()) {
             // Access fiducial results
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
             aprilTag = fiducialResults.get(0).getFiducialId();
         }
 
-        switch(aprilTag){
-            case(21):
+        switch (aprilTag) {
+            case (21):
                 tempMotif = Motif.GPP;
                 break;
-            case(22):
+            case (22):
                 tempMotif = Motif.PGP;
                 break;
-            case(23):
+            case (23):
                 tempMotif = Motif.PPG;
                 break;
             default:
                 tempMotif = Motif.NULL;
                 break;
         }
-        if(tempMotif != Motif.NULL){
+        if (tempMotif != Motif.NULL) {
             motif = tempMotif;
         }
 
     }
 
     /// @return The last recognised motif.
-    public Motif getMotif(){return motif;}
+    public Motif getMotif() {return motif;}
 
     /// Uses Limelight to detect Goal angle and update goalTx and goalTy.
-    public void scanGoalAngle(){
+    public void scanGoalAngle() {
         int selectedPipeline;
 
         // Ensure polling for limelight data
-        if(!limelight.isRunning()){
+        if (!limelight.isRunning()) {
             limelight.start();
         }
 
         // Set desired pipeline
-        switch(team){
+        switch (team) {
             case BLUE:
                 selectedPipeline = limelightBluePipeline;
                 break;
@@ -294,7 +293,7 @@ public class Config {
         }
 
         // Set pipeline
-        if(limelight.getStatus().getPipelineIndex() != selectedPipeline){
+        if (limelight.getStatus().getPipelineIndex() != selectedPipeline){
             limelight.pipelineSwitch(selectedPipeline);
         }
 
@@ -302,22 +301,22 @@ public class Config {
         LLResult result = limelight.getLatestResult();
 
         // Update angles
-        if(result != null && result.isValid()){
+        if (result != null && result.isValid()) {
             goalAnglesAreValid = true;
             goalTx = result.getTx();
             goalTy = result.getTy();
         }
-        else{
+        else {
             goalAnglesAreValid = false;
         }
 
     }
 
-    public void increaseLauncherPower(){
+    public void increaseLauncherPower() {
         idealLauncherPower = Range.clip(idealLauncherPower + .1,0.1,1);
     }
 
-    public void decreaseLauncherPower(){
+    public void decreaseLauncherPower() {
         idealLauncherPower = Range.clip(idealLauncherPower - .1,0.1,1);
     }
 
@@ -358,9 +357,9 @@ public class Config {
  * Thread class used to control the kicker.
  * Must be provided a Config using 'setConfig().'
  */
-class KickerThread extends Thread{
+class KickerThread extends Thread {
     Config robot;
-    public void setConfig(Config robot){this.robot = robot;}
+    public void setConfig(Config robot) {this.robot = robot;}
 
     private boolean toIdle = false;
     private boolean toActive = false;
@@ -368,8 +367,8 @@ class KickerThread extends Thread{
     private volatile boolean running = true; // When false, thread terminates
 
     @Override
-    public void run(){
-        while(running){
+    public void run() {
+        while (running) {
             synchronized (this) {
                 try {
                     wait(); // Sleep until notified (Save resources)
@@ -381,12 +380,12 @@ class KickerThread extends Thread{
 
             if (!running) break; // check before doing work
 
-            if(toIdle){
+            if (toIdle) {
                 doIdle();
                 toIdle = false;
             }
 
-            if(toActive){
+            if (toActive) {
                 doActive();
                 toActive = false;
             }
@@ -395,17 +394,17 @@ class KickerThread extends Thread{
     }
 
     /// Terminates the thread
-    public void terminate(){
+    public void terminate() {
         running = false;
         notify();
     }
 
-    private void doIdle(){
+    private void doIdle() {
         robot.kickerMotor.setPower(robot.kickerIdlePower);
         robot.kickerServo.setPosition(robot.storeKickerPosition);
     }
 
-    private void doActive(){
+    private void doActive() {
         try {
             robot.kickerMotor.setPower(robot.kickerOnPower);
             Thread.sleep(robot.motorRampUpTime); // Wait for motor to ramp up
@@ -416,13 +415,13 @@ class KickerThread extends Thread{
     }
 
     /// Move the kicker into the idle position and set idle power
-    public synchronized void setIdle(){
+    public synchronized void setIdle() {
         toIdle = true;
         notify();
     }
 
     /// Move the kicker into the active position and set active power
-    public synchronized void setActive(){
+    public synchronized void setActive() {
         toActive = true;
         notify();
     }
@@ -433,17 +432,17 @@ class KickerThread extends Thread{
  * Thread class used to launch artifacts.
  * Must be provided a Config using 'setConfig().'
  */
-class LauncherThread extends Thread{
+class LauncherThread extends Thread {
     Config robot;
-    public void setConfig(Config robot){this.robot = robot;}
+    public void setConfig(Config robot) {this.robot = robot;}
 
     private int artifactsToLaunch = 0;
 
     private volatile boolean running = true; // When false, thread terminates
 
     @Override
-    public void run(){
-        while(running){
+    public void run() {
+        while (running) {
             synchronized (this) {
                 try {
                     wait(); // Sleep until notified (Save resources)
@@ -460,12 +459,12 @@ class LauncherThread extends Thread{
         }
     }
 
-    private void setLauncherPower(double power){
+    private void setLauncherPower(double power) {
         robot.leftLauncher.setPower(power);
         robot.rightLauncher.setPower(power);
     }
 
-    private void doLaunch(int artifactsToLaunch){
+    private void doLaunch(int artifactsToLaunch) {
         try {
             double agitatorStartPower = robot.agitator.getPower();
 
@@ -477,7 +476,7 @@ class LauncherThread extends Thread{
             robot.kickerServo.setPosition(robot.activeKickerPosition);
             sleep(700);
             // Artifact One fully exited
-            for(int i = 1; i <artifactsToLaunch; i++){
+            for (int i = 1; i <artifactsToLaunch; i++) {
                 robot.kickerServo.setPosition(robot.storeKickerPosition);
                 sleep(400); // Waiting for artifact to clear kicker
                 robot.kickerServo.setPosition(robot.activeKickerPosition);
@@ -494,12 +493,12 @@ class LauncherThread extends Thread{
         }
     }
 
-    public synchronized void terminate(){
+    public synchronized void terminate() {
         running = false;
         notify();
     }
 
-    public synchronized void launch(int artifactsToLaunch){
+    public synchronized void launch(int artifactsToLaunch) {
         this.artifactsToLaunch = artifactsToLaunch;
         notify();
     }

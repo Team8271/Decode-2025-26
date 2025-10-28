@@ -4,10 +4,10 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.Range;
 
-@TeleOp(name="DevOp")
+@TeleOp(name = "DevOp")
 public class DevOp extends LinearOpMode {
     @Override
-    public void runOpMode(){
+    public void runOpMode() {
         Config robot = new Config(this);
         robot.init();
         boolean debounce = false;
@@ -22,7 +22,7 @@ public class DevOp extends LinearOpMode {
 
         robot.kickerMotor.setPower(robot.kickerIdlePower);
 
-        while(opModeIsActive()){
+        while (opModeIsActive()) {
             // Driver 1 Controls
             double axialControl = -gamepad1.left_stick_y;  // y axis
             double lateralControl = gamepad1.left_stick_x; // x axis
@@ -39,29 +39,29 @@ public class DevOp extends LinearOpMode {
             boolean decreaseLauncherPower = gamepad2.dpad_down;
 
 
-            if(launchOneArtifact){
+            if (launchOneArtifact) {
                 robot.launcherThread.launch(1);
             }
-            if(launchTwoArtifacts){
+            if (launchTwoArtifacts) {
                 robot.launcherThread.launch(3);
             }
 
             // Dev launcher adjustments, to be handled with a limelight blackbox
-            if(increaseLauncherPower && !launcherDebounce){
+            if (increaseLauncherPower && !launcherDebounce) {
                 robot.increaseLauncherPower();
                 launcherDebounce = true;
             }
-            if(decreaseLauncherPower && !launcherDebounce){
+            if (decreaseLauncherPower && !launcherDebounce) {
                 robot.decreaseLauncherPower();
                 launcherDebounce = true;
             }
-            if(!increaseLauncherPower && !decreaseLauncherPower && launcherDebounce){
+            if (!increaseLauncherPower && !decreaseLauncherPower && launcherDebounce) {
                 debounce = false;
             }
 
 
-            if(activateAgitatorAssembly && !debounce){
-                if(agitatorPower == 1){
+            if (activateAgitatorAssembly && !debounce) {
+                if (agitatorPower == 1) {
                     agitatorPower = 0;
                     intakeServoTarget = 0.5;
                 }
@@ -73,7 +73,7 @@ public class DevOp extends LinearOpMode {
             }
 
 
-            if(!activateAgitatorAssembly && debounce){
+            if (!activateAgitatorAssembly && debounce) {
                 debounce = false;
             }
 
@@ -82,7 +82,7 @@ public class DevOp extends LinearOpMode {
 
 
             // FCD reset
-            if(resetFCD){
+            if (resetFCD) {
                 robot.odometer.resetTo(0,0,180);
             }
 
