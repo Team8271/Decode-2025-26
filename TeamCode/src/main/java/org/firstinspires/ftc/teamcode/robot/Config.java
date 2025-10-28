@@ -164,16 +164,17 @@ public class Config {
         kickerServo = hwMap.get(Servo.class, "kickerServo");
         kickerServo.setPosition(storeKickerPosition);
         intakeServo = hwMap.get(Servo.class, "intakeServo");
+
         // Launcher Multithreading
         launcherThread = new LauncherThread();
         launcherThread.setConfig(this);
-        launcherThread.start();
 
         // Kicker Multithreading
         kickerThread = new KickerThread();
         kickerThread.setConfig(this);
-        kickerThread.start();
 
+        // Starts Threads
+        checkAndRestartThreads();
 
         // Tilt Servos - Used to angle projectile
         //leftTilt = hwMap.get(Servo.class, "leftTilt");
@@ -335,6 +336,21 @@ public class Config {
             logWriter.write(outputString);
             logWriter.newLine();
         } catch (IOException ignored) {}
+    }
+
+    /**
+     * Checks if kicker and launcher threads are active.
+     * If not active, starts them.
+     */
+    public void checkAndRestartThreads() {
+        if (!kickerThread.isAlive()) {
+            log("Starting kickerThread");
+            kickerThread.start();
+        }
+        if (!launcherThread.isAlive()) {
+            log("Starting launcherThread");
+            launcherThread.start();
+        }
     }
 
     public void killThreads() {
