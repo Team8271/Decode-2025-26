@@ -222,7 +222,7 @@ public class Config {
                 .setRotationBuffer(4) // Degree(s)
                 .setLoggingEnabled(true)
                 .build();
-        odometer.resetTo(0,0,180);
+        odometer.resetTo(0,0,0);
     }
 
     /// Set team for launching system etc.
