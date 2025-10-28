@@ -290,6 +290,7 @@ public class Config {
                 break;
             default:
                 selectedPipeline = 4;
+                break;
         }
 
         // Set pipeline
