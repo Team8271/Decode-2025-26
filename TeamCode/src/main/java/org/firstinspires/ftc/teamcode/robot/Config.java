@@ -38,7 +38,7 @@ public class Config {
         storeKickerPosition = 0.5, activeKickerPosition = 1,
         agitatorActivePower = 1;
 
-    public final int motorRampUpTime = 200;
+    public final int motorRampUpTime = 300;
 
     // This value will be changed with Limelight sensing to get the ideal power
     public double idealLauncherPower = 1;
