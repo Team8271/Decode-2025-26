@@ -83,7 +83,7 @@ public class TeleOpMode extends LinearOpMode {
 
             // FCD reset
             if (resetFCD) {
-                robot.odometer.resetTo(0,0,180);
+                robot.odometer.resetTo(0,0,0);
             }
 
             // Calculate drive train power for field centric
