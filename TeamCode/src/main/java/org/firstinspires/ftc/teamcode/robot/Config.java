@@ -210,10 +210,13 @@ public class Config {
                 .setSideEncoderDistance(10.75)
                 .setMiddleEncoderOffset(9.75)
                 .build();
+
+        log("Robot Initialized");
     }
 
     /// Initializes TweetyBird.
     public void initTweetyBird() {
+        log("TweetyBird Initialized");
         tweetyBird = new TweetyBird.Builder()
                 .setDistanceBuffer(1) // Inch(es)
                 .setDriver(mecanum)
@@ -228,7 +231,10 @@ public class Config {
     }
 
     /// Set team for launching system etc.
-    public void setTeam(Team team) {this.team = team;}
+    public void setTeam(Team team) {
+        log("Team set to " + team);
+        this.team = team;
+    }
 
     /// Uses Limelight to detect Obelisk Motif pattern and updates Motif.motif.
     public void scanObelisk() {
@@ -236,9 +242,11 @@ public class Config {
         Motif tempMotif;
 
         if (!limelight.isRunning()) {
+            log("Limelight: Starting");
             limelight.start();
         }
         if (limelight.getStatus().getPipelineIndex() != limelightObeliskPipeline) {
+            log("Limelight: Pipeline changed to OBELISK");
             limelight.pipelineSwitch(limelightObeliskPipeline);
         }
         LLResult result = limelight.getLatestResult();
@@ -264,6 +272,7 @@ public class Config {
                 break;
         }
         if (tempMotif != Motif.NULL) {
+            log("Motif changed to: " + motif);
             motif = tempMotif;
         }
 
@@ -278,18 +287,22 @@ public class Config {
 
         // Ensure polling for limelight data
         if (!limelight.isRunning()) {
+            log("Limelight: Starting");
             limelight.start();
         }
 
         // Set desired pipeline
         switch (team) {
             case BLUE:
+                log("Limelight: Pipeline change: BLUE");
                 selectedPipeline = limelightBluePipeline;
                 break;
             case RED:
+                log("Limelight: Pipeline change: RED");
                 selectedPipeline = limelightRedPipeline;
                 break;
             default:
+                log("Limelight: Pipeline change: 4");
                 selectedPipeline = 4;
                 break;
         }
