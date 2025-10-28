@@ -12,6 +12,13 @@ import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 
 import dev.narlyx.tweetybird.Drivers.Mecanum;
@@ -20,6 +27,11 @@ import dev.narlyx.tweetybird.TweetyBird;
 
 /// Configuration class
 public class Config {
+
+    private static final Logger log = LoggerFactory.getLogger(Config.class);
+
+    // Log file writer
+    protected BufferedWriter logWriter = null;
 
     // Changeable Power Values
     public final double kickerIdlePower = 0.3, kickerOnPower = 1,
@@ -307,6 +319,22 @@ public class Config {
 
     public void decreaseLauncherPower(){
         idealLauncherPower = Range.clip(idealLauncherPower - .1,0.1,1);
+    }
+
+    protected void log(String message) {
+        // Getting current time
+        Date now = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss.SSS");
+        String date = sdf.format(now);
+
+        // Processing string
+        String outputString = "["+date+" Config]: "+message;
+
+        // Logfile
+        try {
+            logWriter.write(outputString);
+            logWriter.newLine();
+        } catch (IOException ignored) {}
     }
 }
 
