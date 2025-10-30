@@ -127,6 +127,9 @@ public class TeleOpMode extends LinearOpMode {
             robot.bl.setPower(leftBackPower * mainThrottle);
             robot.br.setPower(rightBackPower * mainThrottle);
 
+            // Limelight things!
+            robot.limelightThread.scanGoalAngle();
+            robot.limelightThread.scanObelisk();
 
             telemetry.addData("Launcher Thread Alive", robot.launcherThread.isAlive());
             telemetry.addData("Launcher Power", robot.idealLauncherPower);
