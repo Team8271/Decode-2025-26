@@ -67,7 +67,7 @@ public class Config {
     public boolean goalAnglesAreValid;
     public double goalTx;
     public double goalTy;
-    private Motif motif;
+    public Motif motif;
     public LauncherThread launcherThread;
     public LimelightThread limelightThread;
 

@@ -12,11 +12,33 @@ public class TeleOpMode extends LinearOpMode {
         robot.init();
         boolean debounce = false;
         boolean launcherDebounce = false;
+        boolean selectorDebounce = false;
         double agitatorPower = 0;
         double intakeServoTarget = 0.5;
 
         telemetry.addLine("Initialized");
         telemetry.update();
+
+        while(opModeInInit() && !isStopRequested()){
+            telemetry.addLine("Use d-Pad down to change team.");
+            telemetry.addData("Team Color",robot.team);
+            telemetry.update();
+            if(gamepad1.dpad_down && !selectorDebounce){
+                switch (robot.team){
+                    case RED:
+                        robot.setTeam(Config.Team.BLUE);
+                        break;
+                    case BLUE:
+                        robot.setTeam(Config.Team.RED);
+                        break;
+                }
+                selectorDebounce = true;
+            }
+            if(!gamepad1.dpad_down && selectorDebounce){
+                selectorDebounce = false;
+            }
+            sleep(10);
+        }
 
         waitForStart();
 
