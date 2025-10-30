@@ -206,8 +206,8 @@ public class Config {
                 .setFlipRightEncoder(true)
                 .setFlipMiddleEncoder(true)
 
-                .setSideEncoderDistance(10.75)
-                .setMiddleEncoderOffset(9.75)
+                .setSideEncoderDistance(10.6875)
+                .setMiddleEncoderOffset(7.5625)
                 .build();
 
         log("Robot Initialized");
