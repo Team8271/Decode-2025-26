@@ -332,6 +332,42 @@ public class Config {
 
 }
 
+class GoalAngle {
+    private final double Tx;
+    private final double Ty;
+    private final boolean fresh;
+
+    // Constructor to initialize the fields
+    public GoalAngle(double Tx, double Ty, boolean fresh) {
+        this.Tx = Tx;
+        this.Ty = Ty;
+        this.fresh = fresh;
+    }
+
+    // Getter methods for each field
+    public double getTx() {
+        return Tx;
+    }
+
+    public double getTy() {
+        return Ty;
+    }
+
+    public boolean isFresh() {
+        return fresh;
+    }
+
+    // You would typically also override toString(), equals(), and hashCode()
+    @Override
+    public String toString() {
+        return "Goal Angle{" +
+                "Tx=" + Tx +
+                ", Ty=" + Ty +
+                ", isFresh=" + fresh +
+                '}';
+    }
+}
+
 /**
  * Thread class used to launch artifacts.
  * Must be provided a Config using 'setConfig().'
