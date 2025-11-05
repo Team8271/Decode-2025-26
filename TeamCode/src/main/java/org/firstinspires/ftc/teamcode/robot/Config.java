@@ -6,6 +6,7 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -47,7 +48,7 @@ public class Config {
     public final LinearOpMode opMode;
 
     // Define Motors
-    public DcMotor fl, fr, bl, br,
+    public DcMotorEx fl, fr, bl, br,
             agitator, leftLauncher, rightLauncher,
             kickerMotor;
 
@@ -109,53 +110,51 @@ public class Config {
         imu.initialize(new IMU.Parameters(orientationOnRobot));
 
         // Front Left Drive
-        fl = hwMap.get(DcMotor.class, "fl");
+        fl = hwMap.get(DcMotorEx.class, "fl");
         fl.setDirection(DcMotor.Direction.REVERSE);
         fl.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         fl.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         fl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Front Right Drive
-        fr = hwMap.get(DcMotor.class, "fr");
+        fr = hwMap.get(DcMotorEx.class, "fr");
         fr.setDirection(DcMotor.Direction.FORWARD);
         fr.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         fr.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         fr.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Back Left Drive
-        bl = hwMap.get(DcMotor.class, "bl");
+        bl = hwMap.get(DcMotorEx.class, "bl");
         bl.setDirection(DcMotor.Direction.REVERSE);
         bl.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         bl.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         bl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Back Right Drive
-        br = hwMap.get(DcMotor.class, "br");
+        br = hwMap.get(DcMotorEx.class, "br");
         br.setDirection(DcMotor.Direction.FORWARD);
         br.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         br.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         br.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Motor used in the Active Agitator module
-        agitator = hwMap.get(DcMotor.class, "agitator");
+        agitator = hwMap.get(DcMotorEx.class, "agitator");
         agitator.setDirection(DcMotorSimple.Direction.REVERSE);
         agitator.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         agitator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Robot Facing Left Launcher Motor
-        leftLauncher = hwMap.get(DcMotor.class, "leftLauncher");
+        leftLauncher = hwMap.get(DcMotorEx.class, "leftLauncher");
         leftLauncher.setDirection(DcMotorSimple.Direction.FORWARD);
-        leftLauncher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         leftLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Robot Facing Right Launcher Motor
-        rightLauncher = hwMap.get(DcMotor.class, "rightLauncher");
+        rightLauncher = hwMap.get(DcMotorEx.class, "rightLauncher");
         rightLauncher.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightLauncher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Kicker Motor "spin-ny thing"
-        kickerMotor = hwMap.get(DcMotor.class, "kickerMotor");
+        kickerMotor = hwMap.get(DcMotorEx.class, "kickerMotor");
         kickerMotor.setDirection(DcMotorSimple.Direction.FORWARD);
         kickerMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         kickerMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
