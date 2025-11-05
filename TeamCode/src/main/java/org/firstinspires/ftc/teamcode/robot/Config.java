@@ -340,6 +340,7 @@ class LauncherThread extends Thread {
     public void setConfig(Config robot) {this.robot = robot;}
 
     private int artifactsToLaunch = 0;
+    private volatile boolean isBusy = false;
 
     private volatile boolean running = true; // When false, thread terminates
 
@@ -357,9 +358,17 @@ class LauncherThread extends Thread {
 
             if (!running) break; // check before doing work
 
+            isBusy = true;
+
             doLaunch(artifactsToLaunch);
 
+            isBusy = false;
+
         }
+    }
+
+    public void waitWhileBusy() throws InterruptedException {
+        while(isBusy) sleep(50);
     }
 
     private void setLauncherPower(double power) {
