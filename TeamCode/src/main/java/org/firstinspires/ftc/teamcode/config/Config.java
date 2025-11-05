@@ -90,6 +90,20 @@ public class Config {
     public Mecanum mecanum;
     public TweetyBird tweetyBird;
 
+    public void runAutoSelector() {
+        Selector selector = new Selector.Builder(opMode)
+                .addStage(new Selector.Stage("Alliance")
+                        .addOption("RED", "b")
+                        .addOption("BLUE", "x"))
+                .setConfirmationDelay(300)
+                .build();
+
+        selector.select();
+
+        // Store results in Config
+        this.alliance = Alliance.valueOf(selector.getSelection("Alliance"));
+    }
+
     // Pass opMode to config
     public Config(LinearOpMode opMode) {this.opMode = opMode;}
 
