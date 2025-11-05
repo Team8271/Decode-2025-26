@@ -4,8 +4,13 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.teamcode.config.Config;
+import org.firstinspires.ftc.teamcode.config.Selector;
+
+import java.util.Map;
+
 @TeleOp(name = "TeleOp")
-public class TeleOpMode extends LinearOpMode {
+public class Tele extends LinearOpMode {
     @Override
     public void runOpMode() {
         Config robot = new Config(this);
@@ -18,27 +23,6 @@ public class TeleOpMode extends LinearOpMode {
 
         telemetry.addLine("Initialized");
         telemetry.update();
-
-        while(opModeInInit() && !isStopRequested()){
-            telemetry.addLine("Use d-Pad down to change team.");
-            telemetry.addData("Team Color",robot.team);
-            telemetry.update();
-            if(gamepad1.dpad_down && !selectorDebounce){
-                switch (robot.team){
-                    case RED:
-                        robot.setTeam(Config.Team.BLUE);
-                        break;
-                    case BLUE:
-                        robot.setTeam(Config.Team.RED);
-                        break;
-                }
-                selectorDebounce = true;
-            }
-            if(!gamepad1.dpad_down && selectorDebounce){
-                selectorDebounce = false;
-            }
-            sleep(10);
-        }
 
         waitForStart();
 
