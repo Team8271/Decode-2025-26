@@ -146,11 +146,13 @@ public class Config {
         // Robot Facing Left Launcher Motor
         leftLauncher = hwMap.get(DcMotorEx.class, "leftLauncher");
         leftLauncher.setDirection(DcMotorSimple.Direction.FORWARD);
+        leftLauncher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Robot Facing Right Launcher Motor
         rightLauncher = hwMap.get(DcMotorEx.class, "rightLauncher");
         rightLauncher.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightLauncher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         rightLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Kicker Motor "spin-ny thing"
