@@ -79,11 +79,11 @@ public class Config {
         PPG,    // AprilTag 23
         NULL;
     }
-    public enum Team {
+    public enum Alliance {
         RED,
         BLUE;
     }
-    Team team;
+    public Alliance alliance;
 
     // TweetyBird Classes
     public ThreeWheeled odometer;
@@ -96,7 +96,6 @@ public class Config {
     /// Initialization Method
     public void init() {
         motif = Motif.NULL;
-        setTeam(Team.BLUE);
 
         // Shorten HardwareMap for frequent use
         HardwareMap hwMap = opMode.hardwareMap;
@@ -228,12 +227,6 @@ public class Config {
                 .setLoggingEnabled(true)
                 .build();
         odometer.resetTo(0,0,0);
-    }
-
-    /// Set team for launching system etc.
-    public void setTeam(Team team) {
-        log("Team set to " + team);
-        this.team = team;
     }
 
     /// Uses Limelight to detect Obelisk Motif pattern and updates Motif.motif.
