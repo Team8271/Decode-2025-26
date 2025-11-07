@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.config;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.List;
 
@@ -17,12 +18,18 @@ public class LimelightThread extends Thread {
 
     private volatile boolean running = true; // When false, thread terminates
 
-    boolean scanGoalAngle = false;
-    boolean scanObelisk = false;
+    volatile boolean scanGoalAngle = false;
+    volatile boolean scanObelisk = false;
+    volatile boolean correcting = false;
+
+    ElapsedTime runtime;
+    double lastTime;
 
     @Override
     public void run() {
-        while (running) {
+        runtime = new ElapsedTime();
+        runtime.reset();
+        while (running && !robot.opMode.isStopRequested()) {
             synchronized (this) {
                 try {
                     wait(); // Sleep until notified (Save resources)
@@ -34,8 +41,14 @@ public class LimelightThread extends Thread {
 
             if (!running) break; // check before doing work
 
-            if (scanGoalAngle) {
+            if (scanGoalAngle && (runtime.time() > lastTime+0.1)) {
+                lastTime = runtime.time();
                 doScanGoalAngle();
+                scanGoalAngle = false;
+            }
+
+            if(correcting) {
+                doGoalCorrection(); // Sets correcting false on its own
             }
 
         }
@@ -72,7 +85,7 @@ public class LimelightThread extends Thread {
                 selectedPipeline = robot.limelightRedPipeline;
                 break;
             default:
-                selectedPipeline = 4;
+                selectedPipeline = robot.limelightBluePipeline;
                 break;
         }
 
@@ -90,6 +103,7 @@ public class LimelightThread extends Thread {
             robot.goalAnglesAreValid = true;
             robot.goalTx = result.getTx();
             robot.goalTy = result.getTy();
+            robot.avgDist = result.getBotposeAvgDist();
         } else {
             robot.goalAnglesAreValid = false;
         }
@@ -137,8 +151,58 @@ public class LimelightThread extends Thread {
 
     }
 
+    public synchronized void startGoalCorrection() {
+        correcting = true;
+        notify();
+    }
+    public synchronized void terminateGoalCorrection() {
+        correcting = false;
+        robot.setWheelPowers(0,0,0,0);
+    }
+    public synchronized boolean isGoalCorrectionDone() {
+        return correcting;
+    }
+    public synchronized void waitWhileCorrecting() {
+        robot.opMode.sleep(100);
+        while (correcting && robot.opMode.opModeIsActive());
+    }
+
+    private void doGoalCorrection() {
+
+        while(correcting && running && !robot.opMode.isStopRequested()) {
+
+            double deadband = 2.0;      // Stop correcting when within 2 degree(s)
+            double maxError = 10.0;     // Full speed when 10 degrees or more off
+            double minPower = 0.1;      // Smallest power that still moves the wheels
+            double targetAngle = 5.0;   // Aim 5° to the left of the target (reversed directions)
+
+            double error = robot.goalTx - targetAngle; // Angular error
+            double absError = Math.abs(error);
+
+            // Scale power by distance to goal
+            double scale = Math.min(absError / maxError, 1.0);
+            double power = Math.max(0.1, robot.autoRotateSpeed * scale);
+
+            if (absError <= deadband) {
+                // Close enough: stop correcting
+                correcting = false;
+                robot.setWheelPowers(0, 0, 0, 0);
+            }
+            else if (error < 0) {
+                // Rotate Left
+                robot.setWheelPowers(-power, power, -power, power);
+            }
+            else {
+                // Rotate Right
+                robot.setWheelPowers(power, -power, power, -power);
+            }
+        }
+        robot.setWheelPowers(0,0,0,0);
+
+    }
     public synchronized void terminate() {
         running = false;
         notify();
     }
+
 }

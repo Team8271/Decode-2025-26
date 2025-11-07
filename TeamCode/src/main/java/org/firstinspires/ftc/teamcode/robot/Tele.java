@@ -5,9 +5,6 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.config.Config;
-import org.firstinspires.ftc.teamcode.config.Selector;
-
-import java.util.Map;
 
 @TeleOp(name = "TeleOp")
 public class Tele extends LinearOpMode {

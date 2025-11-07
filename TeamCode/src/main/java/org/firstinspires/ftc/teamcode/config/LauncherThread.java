@@ -13,12 +13,13 @@ public class LauncherThread extends Thread {
 
     private int artifactsToLaunch = 0;
     private volatile boolean isBusy = false;
+    private volatile boolean isDone = false;
 
     private volatile boolean running = true; // When false, thread terminates
 
     @Override
     public void run() {
-        while (running) {
+        while (running && !robot.opMode.isStopRequested()) {
             synchronized (this) {
                 try {
                     wait(); // Sleep until notified (Save resources)
@@ -34,18 +35,23 @@ public class LauncherThread extends Thread {
 
             doLaunch(artifactsToLaunch);
 
-            isBusy = false;
-
+            if(isDone) isBusy = false; isDone = false;
         }
     }
 
-    public void waitWhileBusy() throws InterruptedException {
-        while (isBusy) sleep(50);
+    public void waitWhileBusy() {
+        robot.opMode.sleep(100);
+        while (isBusy && robot.opMode.opModeIsActive());
     }
 
     private void setLauncherPower(double power) {
         robot.leftLauncher.setPower(power);
         robot.rightLauncher.setPower(power);
+    }
+
+    private void setLauncherVelocity(double velocity) {
+        robot.leftLauncher.setVelocity(velocity);
+        robot.rightLauncher.setVelocity(velocity);
     }
 
     private void doLaunch(int artifactsToLaunch) {
@@ -54,7 +60,8 @@ public class LauncherThread extends Thread {
 
             robot.agitator.setPower(robot.agitatorActivePower);
 
-            setLauncherPower(robot.idealLauncherPower);
+            //setLauncherPower(robot.idealLauncherPower);
+            setLauncherVelocity(robot.idealLauncherVelocity);
             robot.kickerMotor.setPower(robot.kickerOnPower);
             sleep(robot.motorRampUpTime); // Ramp up motors
             robot.kickerServo.setPosition(robot.activeKickerPosition);
@@ -70,10 +77,12 @@ public class LauncherThread extends Thread {
             // Go to IDLE mode
             robot.kickerServo.setPosition(robot.storeKickerPosition);
             robot.kickerMotor.setPower(robot.kickerIdlePower);
+            robot.agitator.setPower(agitatorStartPower);
             setLauncherPower(0);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        isDone = true;
     }
 
     public synchronized void terminate() {

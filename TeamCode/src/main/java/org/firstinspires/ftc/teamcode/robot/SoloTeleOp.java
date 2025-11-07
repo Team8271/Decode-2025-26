@@ -2,18 +2,24 @@ package org.firstinspires.ftc.teamcode.robot;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.config.Config;
 
 @TeleOp(name = "SOLO: TeleOp")
 public class SoloTeleOp extends LinearOpMode {
+    ElapsedTime runtime;
+    double lastTime = 0;
+
     @Override
     public void runOpMode() {
         Config robot = new Config(this);
         robot.init();
+        runtime = new ElapsedTime();
         boolean debounce = false;
         boolean launcherDebounce = false;
+        double launcherPower = 0.8;
         double agitatorPower = 0;
         double intakeServoTarget = 0.5;
 
@@ -21,6 +27,7 @@ public class SoloTeleOp extends LinearOpMode {
         telemetry.update();
 
         waitForStart();
+        runtime.reset();
 
         robot.kickerMotor.setPower(robot.kickerIdlePower);
 
@@ -35,12 +42,39 @@ public class SoloTeleOp extends LinearOpMode {
             boolean launchOneArtifact = gamepad1.a;
             boolean launchTwoArtifacts = gamepad1.y;
             boolean activateAgitatorAssembly = gamepad1.b;
+            boolean activateAimAssist = gamepad1.dpad_right;
+            boolean abort = gamepad1.options;
+
+            if(activateAimAssist) {
+                robot.limelightThread.startGoalCorrection();
+                while(!robot.limelightThread.isGoalCorrectionDone() && !isStopRequested()){
+                    if(abort){
+                        robot.limelightThread.terminateGoalCorrection();
+                        break;
+                    }
+                    telemetry.addLine("Looping aim assist");
+                    telemetry.update();
+                }
+            }
 
             if (launchOneArtifact) {
                 robot.launcherThread.launch(1);
             }
             if (launchTwoArtifacts) {
                 robot.launcherThread.launch(3);
+            }
+
+            if(gamepad1.right_bumper && !launcherDebounce) {
+                launcherPower += 0.1;
+                launcherDebounce = true;
+            }
+            if(gamepad1.left_bumper && !launcherDebounce) {
+                launcherPower -= 0.1;
+                launcherDebounce = true;
+            }
+
+            if(!gamepad1.right_bumper && !gamepad1.left_bumper && launcherDebounce){
+                launcherDebounce = false;
             }
 
             if (activateAgitatorAssembly && !debounce) {
@@ -86,11 +120,20 @@ public class SoloTeleOp extends LinearOpMode {
             robot.bl.setPower(leftBackPower * mainThrottle);
             robot.br.setPower(rightBackPower * mainThrottle);
 
+            robot.limelightThread.scanGoalAngle();
+
+
+            robot.idealLauncherPower = launcherPower;
 
             telemetry.addData("Launcher Thread Alive", robot.launcherThread.isAlive());
             telemetry.addData("Launcher Power", robot.idealLauncherPower);
             telemetry.addData("\nTx", robot.goalTx);
             telemetry.addData("Ty", robot.goalTy);
+            telemetry.addData("AvgDist", robot.avgDist);
+
+            telemetry.addData("X",robot.odometer.getX());
+            telemetry.addData("Y",robot.odometer.getY());
+            telemetry.addData("Z",Math.toDegrees(robot.odometer.getZ()));
 
             telemetry.addLine("\n\nControls:\n" +
                     "  Axial Control - Left Stick Y\n" +
@@ -104,5 +147,6 @@ public class SoloTeleOp extends LinearOpMode {
 
             telemetry.update();
         }
+        robot.killThreads();
     }
 }
