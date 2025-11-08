@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.config;
 
+import android.util.Log;
+
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -12,17 +14,19 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
-import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ReadWriteFile;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import dev.narlyx.tweetybird.Drivers.Mecanum;
 import dev.narlyx.tweetybird.Odometers.ThreeWheeled;
@@ -30,11 +34,6 @@ import dev.narlyx.tweetybird.TweetyBird;
 
 /// Configuration class
 public class Config {
-
-    //private static final Logger log = LoggerFactory.getLogger(Config.class);
-
-    // Log file writer
-    //protected BufferedWriter logWriter = null;
 
     // Changeable Power Values
     public final double kickerIdlePower = 0, kickerOnPower = 1,
@@ -70,11 +69,6 @@ public class Config {
                         limelightRedPipeline            = 2,
                         limelightBluePipeline           = 3;
 
-    public boolean goalAnglesAreValid;
-    public double goalTx = 0;
-    public double goalTy = 0;
-    public double avgDist = 0;
-    public Motif motif;
     public LauncherThread launcherThread;
     public LimelightThread limelightThread;
 
@@ -91,33 +85,22 @@ public class Config {
     }
     public Alliance alliance;
 
+    // Selector Values
+    public int startingPosition;
+    public boolean runAuto;
+    public int startingDelay;
+    public int numberOfDrivers;
+
     // TweetyBird Classes
     public ThreeWheeled odometer;
     public Mecanum mecanum;
     public TweetyBird tweetyBird;
-
-    public void runAutoSelector() {
-        Selector selector = new Selector.Builder(opMode)
-                .addStage(new Selector.Stage("Alliance")
-                        .addOption("RED", "b")
-                        .addOption("BLUE", "x"))
-                .setConfirmationDelay(300)
-                .build();
-
-        selector.select();
-
-        // Store results in Config
-        this.alliance = Alliance.valueOf(selector.getSelection("Alliance"));
-    }
 
     // Pass opMode to config
     public Config(LinearOpMode opMode) {this.opMode = opMode;}
 
     /// Initialization Method
     public void init() {
-        motif = Motif.NULL;
-        alliance = Alliance.BLUE;
-
         // Shorten HardwareMap for frequent use
         HardwareMap hwMap = opMode.hardwareMap;
 
@@ -253,77 +236,12 @@ public class Config {
         odometer.resetTo(0,0,0);
     }
 
-    /// Uses Limelight to detect Obelisk Motif pattern and updates Motif.motif.
-    public void scanObelisk() {
-        int aprilTag = 0;
-        Motif tempMotif;
-
-        if (!limelight.isRunning()) {
-            log("Limelight: Starting");
-            limelight.start();
-        }
-        if (limelight.getStatus().getPipelineIndex() != limelightObeliskPipeline) {
-            log("Limelight: Pipeline changed to OBELISK");
-            limelight.pipelineSwitch(limelightObeliskPipeline);
-        }
-        LLResult result = limelight.getLatestResult();
-
-        if (result != null && result.isValid()) {
-            // Access fiducial results
-            List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
-            aprilTag = fiducialResults.get(0).getFiducialId();
-        }
-
-        switch (aprilTag) {
-            case (21):
-                tempMotif = Motif.GPP;
-                break;
-            case (22):
-                tempMotif = Motif.PGP;
-                break;
-            case (23):
-                tempMotif = Motif.PPG;
-                break;
-            default:
-                tempMotif = Motif.NULL;
-                break;
-        }
-        if (tempMotif != Motif.NULL) {
-            log("Motif changed to: " + motif);
-            motif = tempMotif;
-        }
-
-    }
-
-    /// @return The last recognised motif.
-    public Motif getMotif() {return motif;}
-
-
     public void increaseLauncherPower() {
         idealLauncherPower = Range.clip(idealLauncherPower + .1,0.1,1);
     }
 
     public void decreaseLauncherPower() {
         idealLauncherPower = Range.clip(idealLauncherPower - .1,0.1,1);
-    }
-
-    protected void log(String message) {
-        // Getting current time
-        Date now = new Date();
-        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss.SSS");
-        String date = sdf.format(now);
-
-        // Processing string
-        String outputString = "["+date+" Config]: "+message;
-
-        // Logfile
-        /*
-        try {
-            logWriter.write(outputString);
-            logWriter.newLine();
-        } catch (IOException ignored) {}
-
-         */
     }
 
     /**
@@ -356,6 +274,85 @@ public class Config {
         fr.setPower(frPower);
         bl.setPower(blPower);
         br.setPower(brPower);
+    }
+
+    public void switchAlliance() {
+        switch(alliance) {
+            case RED: alliance = Alliance.BLUE; break;
+            case BLUE: alliance = Alliance.RED; break;
+        }
+        saveAllianceToFile(alliance);
+    }
+
+
+    public void log(String message) {
+        // Log to Android Logcat (viewable in Android Studio)
+        Log.i("FTC_CONFIG", message);
+
+        // Also log to telemetry if opMode is available
+        if (opMode != null && opMode.telemetry != null) {
+            opMode.telemetry.log().add(message);
+        }
+
+        // Optional: Log to file
+        logToFile(message);
+    }
+
+    private void logToFile(String message) {
+        try {
+            File logFile = new File(AppUtil.FIRST_FOLDER, "robot_log.txt");
+
+            // Create timestamp
+            SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss.SSS", Locale.US);
+            String timestamp = sdf.format(new Date());
+
+            // Format log message
+            String logEntry = "[" + timestamp + " Config]: " + message + "\n";
+
+            // Append to file
+            BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, true));
+            writer.write(logEntry);
+            writer.close();
+
+        } catch (IOException e) {
+            // If file logging fails, just log to Logcat
+            Log.e("FTC_CONFIG", "Failed to write to log file: " + e.getMessage());
+        }
+    }
+
+    public Alliance readAllianceFromFile() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "alliance.txt");
+
+            if (!file.exists()) {
+                log("Alliance file not found, defaulting to RED");
+                return Alliance.RED;
+            }
+
+            String fileContents = ReadWriteFile.readFile(file).trim().toUpperCase();
+
+            if (fileContents.equals("BLUE")) {
+                log("Alliance read from file: BLUE");
+                return Alliance.BLUE;
+            }
+
+            log("Alliance read from file: RED");
+            return Alliance.RED;
+
+        } catch (Exception e) {
+            log("Failed to read alliance: " + e.getMessage());
+            return Alliance.RED;
+        }
+    }
+
+    public void saveAllianceToFile(Alliance alliance) {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "alliance.txt");
+            ReadWriteFile.writeFile(file, alliance.toString());
+            log("Alliance saved: " + alliance);
+        } catch (Exception e) {
+            log("Failed to save alliance: " + e.getMessage());
+        }
     }
 
 }

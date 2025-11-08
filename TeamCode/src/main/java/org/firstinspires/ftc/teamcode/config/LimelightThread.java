@@ -12,6 +12,13 @@ import java.util.List;
 public class LimelightThread extends Thread {
     Config robot;
 
+    volatile boolean goalAnglesAreValid;
+    volatile double goalTx;
+    volatile double goalTy;
+    volatile double avgDist;
+
+    volatile Config.Motif motif;
+
     public void setConfig(Config robot) {
         this.robot = robot;
     }
@@ -50,8 +57,8 @@ public class LimelightThread extends Thread {
             if(correcting) {
                 doGoalCorrection(); // Sets correcting false on its own
             }
-
         }
+        robot.setWheelPowers(0,0,0,0);
     }
 
     /// Limelight updates goalTx and goalTy
@@ -78,15 +85,9 @@ public class LimelightThread extends Thread {
 
         // Set desired pipeline
         switch (robot.alliance) {
-            case BLUE:
-                selectedPipeline = robot.limelightBluePipeline;
-                break;
-            case RED:
-                selectedPipeline = robot.limelightRedPipeline;
-                break;
-            default:
-                selectedPipeline = robot.limelightBluePipeline;
-                break;
+            case BLUE: selectedPipeline = robot.limelightBluePipeline; break;
+            // RED (Avoids uninitialized value)
+            default: selectedPipeline = robot.limelightRedPipeline; break;
         }
 
         // Set pipeline
@@ -100,12 +101,12 @@ public class LimelightThread extends Thread {
 
         // Update angles
         if (result != null && result.isValid()) {
-            robot.goalAnglesAreValid = true;
-            robot.goalTx = result.getTx();
-            robot.goalTy = result.getTy();
-            robot.avgDist = result.getBotposeAvgDist();
+            goalAnglesAreValid = true;
+            goalTx = result.getTx();
+            goalTy = result.getTy();
+            avgDist = result.getBotposeAvgDist();
         } else {
-            robot.goalAnglesAreValid = false;
+            goalAnglesAreValid = false;
         }
 
     }
@@ -127,26 +128,20 @@ public class LimelightThread extends Thread {
         if (result != null && result.isValid()) {
             // Access fiducial results
             List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
-            aprilTag = fiducialResults.get(0).getFiducialId();
+            if (fiducialResults != null && !fiducialResults.isEmpty()) {
+                aprilTag = fiducialResults.get(0).getFiducialId();
+            }
         }
 
         switch (aprilTag) {
-            case (21):
-                tempMotif = Config.Motif.GPP;
-                break;
-            case (22):
-                tempMotif = Config.Motif.PGP;
-                break;
-            case (23):
-                tempMotif = Config.Motif.PPG;
-                break;
-            default:
-                tempMotif = Config.Motif.NULL;
-                break;
+            case (21): tempMotif = Config.Motif.GPP; break;
+            case (22): tempMotif = Config.Motif.PGP; break;
+            case (23): tempMotif = Config.Motif.PPG; break;
+            default: tempMotif = Config.Motif.NULL; break;
         }
         if (tempMotif != Config.Motif.NULL) {
-            robot.log("Motif changed to: " + robot.motif);
-            robot.motif = tempMotif;
+            motif = tempMotif;
+            robot.log("Motif changed to: " + motif);
         }
 
     }
@@ -160,28 +155,37 @@ public class LimelightThread extends Thread {
         robot.setWheelPowers(0,0,0,0);
     }
     public synchronized boolean isGoalCorrectionDone() {
-        return correcting;
+        return !correcting;
     }
-    public synchronized void waitWhileCorrecting() {
+    public void waitWhileCorrecting() {
         robot.opMode.sleep(100);
         while (correcting && robot.opMode.opModeIsActive());
     }
 
     private void doGoalCorrection() {
+        ElapsedTime timeOutClock = new ElapsedTime();
+        timeOutClock.reset();
+        int timeOut = 5; // Max time in seconds that correction can take
 
-        while(correcting && running && !robot.opMode.isStopRequested()) {
+        while(correcting && running && !robot.opMode.isStopRequested() && timeOutClock.time() < timeOut) {
+
+            if (!goalAnglesAreValid) {
+                correcting = false;
+                robot.setWheelPowers(0, 0, 0, 0);
+                break;
+            }
 
             double deadband = 2.0;      // Stop correcting when within 2 degree(s)
             double maxError = 10.0;     // Full speed when 10 degrees or more off
             double minPower = 0.1;      // Smallest power that still moves the wheels
             double targetAngle = 5.0;   // Aim 5° to the left of the target (reversed directions)
 
-            double error = robot.goalTx - targetAngle; // Angular error
+            double error = goalTx - targetAngle; // Angular error
             double absError = Math.abs(error);
 
             // Scale power by distance to goal
             double scale = Math.min(absError / maxError, 1.0);
-            double power = Math.max(0.1, robot.autoRotateSpeed * scale);
+            double power = Math.max(minPower, robot.autoRotateSpeed * scale);
 
             if (absError <= deadband) {
                 // Close enough: stop correcting
@@ -200,6 +204,17 @@ public class LimelightThread extends Thread {
         robot.setWheelPowers(0,0,0,0);
 
     }
+
+    public Config.Motif getMotif(){
+        return motif;
+    }
+    public double getGoalTx(){
+        return goalTx;
+    }
+    public double getGoalTy(){
+        return goalTy;
+    }
+
     public synchronized void terminate() {
         running = false;
         notify();
