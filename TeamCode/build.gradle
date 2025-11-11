@@ -21,6 +21,11 @@ android {
     packagingOptions {
         jniLibs.useLegacyPackaging true
     }
+
+    compileSdk 35
+    defaultConfig {
+        minSdk 24
+    }
 }
 
 dependencies {
