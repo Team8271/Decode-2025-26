@@ -71,17 +71,18 @@ public class Config {
     public double goalTx;
     public double goalTy;
     public Motif motif;
+    public Alliance alliance;
     public Camera camera;
     public Launcher launcher;
 
-    // enums
+    // Enums
     public enum Motif {
         GPP,    // AprilTag 21
         PGP,    // AprilTag 22
         PPG,    // AprilTag 23
         NULL;
     }
-    public enum Team {
+    public enum Alliance {
         RED,
         BLUE;
     }
@@ -98,7 +99,7 @@ public class Config {
     /// Initialization Method
     public void init() {
         motif = Motif.NULL;
-        setTeam(Team.BLUE);
+        setAlliance(Alliance.BLUE);
 
         // Shorten HardwareMap for frequent use
         HardwareMap hwMap = opMode.hardwareMap;
@@ -234,9 +235,9 @@ public class Config {
     }
 
     /// Set team for launching system etc.
-    public void setTeam(Team team) {
-        log("Team set to " + team);
-        this.team = team;
+    public void setAlliance(Alliance alliance) {
+        log("Alliance set to " + alliance);
+        this.alliance = alliance;
     }
 
     /// Uses Limelight to detect Obelisk Motif pattern and updates Motif.motif.
