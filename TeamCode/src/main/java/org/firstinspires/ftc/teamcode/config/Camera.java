@@ -66,7 +66,7 @@ public class Camera extends Thread{
     /// Private method to update goal angles
     private void doScanGoalAngle() {
 
-        if (robot.team == Config.Team.RED) {
+        if (robot.alliance == Config.Alliance.RED) {
             switchPipeline(Pipeline.RED_GOAL);
         } else {
             switchPipeline(Pipeline.BLUE_GOAL);
