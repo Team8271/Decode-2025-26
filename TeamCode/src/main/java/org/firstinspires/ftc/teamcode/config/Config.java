@@ -319,6 +319,15 @@ public class Config {
         }
     }
 
+    public void switchAlliance() {
+        switch(alliance) {
+            case RED: alliance = Alliance.BLUE; break;
+            case BLUE: alliance = Alliance.RED; break;
+        }
+        saveAllianceToFile(alliance);
+    }
+
+
     public void log(String message) {
         // Log to Android Logcat (viewable in Android Studio)
         Log.i("FTC_CONFIG", message);
