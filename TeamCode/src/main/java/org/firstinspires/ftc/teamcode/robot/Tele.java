@@ -32,19 +32,19 @@ public class Tele extends LinearOpMode {
 
         robot.kickerMotor.setPower(robot.kickerIdlePower);
 
+        double axialControl;
+        double lateralControl;
+        double yawControl;
+        double mainThrottle;
+        boolean resetFCD;
+
+        boolean launchOneArtifact;
+        boolean launchTwoArtifacts;
+        boolean activateAgitatorAssembly;
+        boolean activateAimAssist = false;
+        boolean abort = false;
+
         while (opModeIsActive()) {
-
-            double axialControl;
-            double lateralControl;
-            double yawControl;
-            double mainThrottle;
-            boolean resetFCD;
-
-            boolean launchOneArtifact;
-            boolean launchTwoArtifacts;
-            boolean activateAgitatorAssembly;
-            boolean activateAimAssist = false;
-            boolean abort = false;
 
             // One Driver
             if(robot.driverAmount == Config.DriverAmount.ONE_DRIVER) {
