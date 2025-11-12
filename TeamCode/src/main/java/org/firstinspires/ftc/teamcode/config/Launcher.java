@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Config;
+package org.firstinspires.ftc.teamcode.config;
 
 public class Launcher extends Thread {
     Config robot;
