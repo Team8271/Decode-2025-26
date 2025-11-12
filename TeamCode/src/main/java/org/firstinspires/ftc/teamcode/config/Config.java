@@ -17,8 +17,6 @@ import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ReadWriteFile;
 
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -72,6 +70,7 @@ public class Config {
     public double goalTy;
     public Motif motif;
     public Alliance alliance;
+    public DriverAmount driverAmount;
     public Camera camera;
     public Launcher launcher;
 
@@ -86,7 +85,10 @@ public class Config {
         RED,
         BLUE;
     }
-    Team team;
+    public enum DriverAmount {
+        ONE_DRIVER,
+        TWO_DRIVERS;
+    }
 
     // TweetyBird Classes
     public ThreeWheeled odometer;
@@ -362,5 +364,77 @@ public class Config {
             Log.e("FTC_CONFIG", "Failed to write to log file: " + e.getMessage());
         }
     }
+
+    public Alliance readAllianceFromFile() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "alliance.txt");
+
+            if (!file.exists()) {
+                log("Alliance file not found, defaulting to RED");
+                return Alliance.RED;
+            }
+
+            String fileContents = ReadWriteFile.readFile(file).trim().toUpperCase();
+
+            if (fileContents.equals("BLUE")) {
+                log("Alliance read from file: BLUE");
+                return Alliance.BLUE;
+            }
+
+            log("Alliance read from file: RED");
+            return Alliance.RED;
+
+        } catch (Exception e) {
+            log("Failed to read alliance: " + e.getMessage());
+            return Alliance.RED;
+        }
+    }
+
+    public void saveAllianceToFile(Alliance alliance) {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "alliance.txt");
+            ReadWriteFile.writeFile(file, alliance.toString());
+            log("Alliance saved: " + alliance);
+        } catch (Exception e) {
+            log("Failed to save alliance: " + e.getMessage());
+        }
+    }
+
+    public DriverAmount readDriverAmountFromFile() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
+
+            if (!file.exists()) {
+                log("DriverAmount file not found, defaulting to TWO_DRIVERS");
+                return DriverAmount.TWO_DRIVERS;
+            }
+
+            String fileContents = ReadWriteFile.readFile(file).trim().toUpperCase();
+
+            if (fileContents.equals("TWO_DRIVERS")) {
+                log("DriverAmount read from file: TWO_DRIVERS");
+                return DriverAmount.TWO_DRIVERS;
+            }
+
+            log("Alliance read from file: ONE_DRIVERS");
+            return DriverAmount.ONE_DRIVER;
+
+        } catch (Exception e) {
+            log("Failed to read driver amount: " + e.getMessage());
+            return DriverAmount.TWO_DRIVERS;
+        }
+    }
+
+    public void saveDriverAmountToFile(DriverAmount driverAmount) {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
+            ReadWriteFile.writeFile(file, driverAmount.toString());
+            log("DriverAmount saved: " + driverAmount);
+        } catch (Exception e) {
+            log("Failed to save driver amount: " + e.getMessage());
+        }
+    }
+
+
 }
 
