@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.config;
 
+import android.util.Log;
+
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -12,15 +14,20 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ReadWriteFile;
 
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import dev.narlyx.tweetybird.Drivers.Mecanum;
 import dev.narlyx.tweetybird.Odometers.ThreeWheeled;
@@ -28,11 +35,6 @@ import dev.narlyx.tweetybird.TweetyBird;
 
 /// Configuration class
 public class Config {
-
-    private static final Logger log = LoggerFactory.getLogger(Config.class);
-
-    // Log file writer
-    protected BufferedWriter logWriter = null;
 
     // Changeable Power Values
     public final double kickerIdlePower = 0, kickerOnPower = 1,
@@ -291,22 +293,6 @@ public class Config {
         idealLauncherPower = Range.clip(idealLauncherPower - .1,0.1,1);
     }
 
-    protected void log(String message) {
-        // Getting current time
-        Date now = new Date();
-        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss.SSS");
-        String date = sdf.format(now);
-
-        // Processing string
-        String outputString = "["+date+" Config]: "+message;
-
-        // Logfile
-        try {
-            logWriter.write(outputString);
-            logWriter.newLine();
-        } catch (IOException ignored) {}
-    }
-
     /**
      * Checks if kicker and launcher threads are active.
      * If not active, starts them.
@@ -332,5 +318,39 @@ public class Config {
         }
     }
 
+    public void log(String message) {
+        // Log to Android Logcat (viewable in Android Studio)
+        Log.i("FTC_CONFIG", message);
+
+        // Also log to telemetry if opMode is available
+        if (opMode != null && opMode.telemetry != null) {
+            opMode.telemetry.log().add(message);
+        }
+
+        // Optional: Log to file
+        logToFile(message);
+    }
+
+    private void logToFile(String message) {
+        try {
+            File logFile = new File(AppUtil.FIRST_FOLDER, "robot_log.txt");
+
+            // Create timestamp
+            SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss.SSS", Locale.US);
+            String timestamp = sdf.format(new Date());
+
+            // Format log message
+            String logEntry = "[" + timestamp + " Config]: " + message + "\n";
+
+            // Append to file
+            BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, true));
+            writer.write(logEntry);
+            writer.close();
+
+        } catch (IOException e) {
+            // If file logging fails, just log to Logcat
+            Log.e("FTC_CONFIG", "Failed to write to log file: " + e.getMessage());
+        }
+    }
 }
 
