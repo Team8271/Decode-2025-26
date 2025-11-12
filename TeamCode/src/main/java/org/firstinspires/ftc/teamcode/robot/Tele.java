@@ -202,7 +202,7 @@ public class Tele extends LinearOpMode {
 
         // Current selections (defaults)
         int allianceIndex = (robot.alliance == Config.Alliance.BLUE) ? 1 : 0;
-        int driverIndex = (robot.driverAmount == Config.DriverAmount.TWO_DRIVERS) ? 2 : 1;
+        int driverIndex = (robot.driverAmount == Config.DriverAmount.TWO_DRIVERS) ? 1 : 0;
 
         // Which entry we're on (0-1)
         int currentEntry = 0;
@@ -296,6 +296,7 @@ public class Tele extends LinearOpMode {
         else {
             robot.driverAmount = Config.DriverAmount.TWO_DRIVERS;
         }
+        robot.saveDriverAmountToFile(robot.driverAmount);
 
         // Final confirmation display
         telemetry.addLine("=== CONFIRMED ===");
