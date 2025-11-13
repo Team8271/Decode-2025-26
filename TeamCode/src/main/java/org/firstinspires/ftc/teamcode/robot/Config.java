@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.robot;
 
+import android.util.Log;
+
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -11,16 +13,21 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ReadWriteFile;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 import dev.narlyx.tweetybird.Drivers.Mecanum;
 import dev.narlyx.tweetybird.Odometers.ThreeWheeled;
@@ -28,11 +35,6 @@ import dev.narlyx.tweetybird.TweetyBird;
 
 /// Configuration class
 public class Config {
-
-    private static final Logger log = LoggerFactory.getLogger(Config.class);
-
-    // Log file writer
-    protected BufferedWriter logWriter = null;
 
     // Changeable Power Values
     public final double kickerIdlePower = 0, kickerOnPower = 1,
@@ -43,13 +45,14 @@ public class Config {
 
     // This value will be changed with Limelight sensing to get the ideal power
     public double idealLauncherPower = 1;
+    public double idealLauncherVelocity = 0; // 0-2500 effective range
 
     // Reference to opMode class
     public final LinearOpMode opMode;
 
     // Define Motors
     public DcMotorEx fl, fr, bl, br,
-            agitator, leftLauncher, rightLauncher,
+            agitator, leftLauncher, rightLauncher, launcherMotor,
             kickerMotor;
 
     // Define Servos
@@ -68,9 +71,13 @@ public class Config {
     public boolean goalAnglesAreValid;
     public double goalTx;
     public double goalTy;
+
     public Motif motif;
+
     public LauncherThread launcherThread;
     public LimelightThread limelightThread;
+
+    public AimAssist aimAssist;
 
     // enums
     public enum Motif {
@@ -79,11 +86,17 @@ public class Config {
         PPG,    // AprilTag 23
         NULL;
     }
-    public enum Team {
+    public enum Alliance {
         RED,
         BLUE;
     }
-    Team team;
+    public enum DriverAmount {
+        ONE_DRIVER,
+        TWO_DRIVERS,
+        DEV_DRIVER
+    }
+    Alliance alliance;
+    DriverAmount driverAmount;
 
     // TweetyBird Classes
     public ThreeWheeled odometer;
@@ -96,7 +109,7 @@ public class Config {
     /// Initialization Method
     public void init() {
         motif = Motif.NULL;
-        setTeam(Team.BLUE);
+        setAlliance(Alliance.BLUE);
 
         // Shorten HardwareMap for frequent use
         HardwareMap hwMap = opMode.hardwareMap;
@@ -155,6 +168,12 @@ public class Config {
         rightLauncher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         rightLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
+        // Modified Robot Launcher Motor
+        launcherMotor = hwMap.get(DcMotorEx.class, "launcher");
+        launcherMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        launcherMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        launcherMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
         // Kicker Motor "spin-ny thing"
         kickerMotor = hwMap.get(DcMotorEx.class, "kickerMotor");
         kickerMotor.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -175,6 +194,9 @@ public class Config {
 
         // Starts Threads
         checkAndRestartThreads();
+
+        // Aim Assist
+        aimAssist = new AimAssist(this);
 
         // Tilt Servos - Used to angle projectile
         //leftTilt = hwMap.get(Servo.class, "leftTilt");
@@ -231,79 +253,134 @@ public class Config {
     }
 
     /// Set team for launching system etc.
-    public void setTeam(Team team) {
-        log("Team set to " + team);
-        this.team = team;
+    public void setAlliance(Alliance alliance) {
+        log("Team set to " + alliance);
+        this.alliance = alliance;
     }
 
-    /// Uses Limelight to detect Obelisk Motif pattern and updates Motif.motif.
-    public void scanObelisk() {
-        int aprilTag = 0;
-        Motif tempMotif;
-
-        if (!limelight.isRunning()) {
-            log("Limelight: Starting");
-            limelight.start();
-        }
-        if (limelight.getStatus().getPipelineIndex() != limelightObeliskPipeline) {
-            log("Limelight: Pipeline changed to OBELISK");
-            limelight.pipelineSwitch(limelightObeliskPipeline);
-        }
-        LLResult result = limelight.getLatestResult();
-
-        if (result != null && result.isValid()) {
-            // Access fiducial results
-            List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
-            aprilTag = fiducialResults.get(0).getFiducialId();
-        }
-
-        switch (aprilTag) {
-            case (21):
-                tempMotif = Motif.GPP;
-                break;
-            case (22):
-                tempMotif = Motif.PGP;
-                break;
-            case (23):
-                tempMotif = Motif.PPG;
-                break;
-            default:
-                tempMotif = Motif.NULL;
-                break;
-        }
-        if (tempMotif != Motif.NULL) {
-            log("Motif changed to: " + motif);
-            motif = tempMotif;
-        }
-
+    public void increaseLauncherVelocity() {
+        idealLauncherVelocity = Range.clip(idealLauncherVelocity + 100,0,2500);
     }
 
-    /// @return The last recognised motif.
-    public Motif getMotif() {return motif;}
-
-
-    public void increaseLauncherPower() {
-        idealLauncherPower = Range.clip(idealLauncherPower + .1,0.1,1);
+    public void decreaseLauncherVelocity() {
+        idealLauncherVelocity = Range.clip(idealLauncherVelocity - 100,0,2500);
     }
 
-    public void decreaseLauncherPower() {
-        idealLauncherPower = Range.clip(idealLauncherPower - .1,0.1,1);
+    public void switchAlliance() {
+        switch(alliance) {
+            case RED: alliance = Alliance.BLUE; break;
+            case BLUE: alliance = Alliance.RED; break;
+        }
+        saveAllianceToFile(alliance);
     }
 
-    protected void log(String message) {
-        // Getting current time
-        Date now = new Date();
-        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss.SSS");
-        String date = sdf.format(now);
 
-        // Processing string
-        String outputString = "["+date+" Config]: "+message;
+    public void log(String message) {
+        // Log to Android Logcat (viewable in Android Studio)
+        Log.i("FTC_CONFIG", message);
 
-        // Logfile
+        /*
+        // Also log to telemetry if opMode is available
+        if (opMode != null && opMode.telemetry != null) {
+            opMode.telemetry.log().add(message);
+        }
+
+         */
+
+        // Optional: Log to file
+        logToFile(message);
+    }
+
+    private void logToFile(String message) {
         try {
-            logWriter.write(outputString);
-            logWriter.newLine();
-        } catch (IOException ignored) {}
+            File logFile = new File(AppUtil.FIRST_FOLDER, "robot_log.txt");
+
+            // Create timestamp
+            SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss.SSS", Locale.US);
+            String timestamp = sdf.format(new Date());
+
+            // Format log message
+            String logEntry = "[" + timestamp + " Config]: " + message + "\n";
+
+            // Append to file
+            BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, true));
+            writer.write(logEntry);
+            writer.close();
+
+        } catch (IOException e) {
+            // If file logging fails, just log to Logcat
+            Log.e("FTC_CONFIG", "Failed to write to log file: " + e.getMessage());
+        }
+    }
+
+    public Alliance readAllianceFromFile() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "alliance.txt");
+
+            if (!file.exists()) {
+                log("Alliance file not found, defaulting to RED");
+                return Alliance.RED;
+            }
+
+            String fileContents = ReadWriteFile.readFile(file).trim().toUpperCase();
+
+            if (fileContents.equals("BLUE")) {
+                log("Alliance read from file: BLUE");
+                return Alliance.BLUE;
+            }
+
+            log("Alliance read from file: RED");
+            return Alliance.RED;
+
+        } catch (Exception e) {
+            log("Failed to read alliance: " + e.getMessage());
+            return Alliance.RED;
+        }
+    }
+
+    public void saveAllianceToFile(Alliance alliance) {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "alliance.txt");
+            ReadWriteFile.writeFile(file, alliance.toString());
+            log("Alliance saved: " + alliance);
+        } catch (Exception e) {
+            log("Failed to save alliance: " + e.getMessage());
+        }
+    }
+
+    public DriverAmount readDriverAmountFromFile() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
+
+            if (!file.exists()) {
+                log("DriverAmount file not found, defaulting to TWO_DRIVERS");
+                return DriverAmount.TWO_DRIVERS;
+            }
+
+            String fileContents = ReadWriteFile.readFile(file).trim().toUpperCase();
+
+            if (fileContents.equals("TWO_DRIVERS")) {
+                log("DriverAmount read from file: TWO_DRIVERS");
+                return DriverAmount.TWO_DRIVERS;
+            }
+
+            log("DriverAmount read from file: ONE_DRIVER");
+            return DriverAmount.ONE_DRIVER;
+
+        } catch (Exception e) {
+            log("Failed to read driver amount: " + e.getMessage());
+            return DriverAmount.TWO_DRIVERS;
+        }
+    }
+
+    public void saveDriverAmountToFile(DriverAmount driverAmount) {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
+            ReadWriteFile.writeFile(file, driverAmount.toString());
+            log("DriverAmount saved: " + driverAmount);
+        } catch (Exception e) {
+            log("Failed to save driver amount: " + e.getMessage());
+        }
     }
 
     /**
@@ -329,6 +406,14 @@ public class Config {
             log("Failed to stop launcherThread");
             throw new RuntimeException(e);
         }
+    }
+
+    public void setWheelPower(double flPower, double frPower, double blPower, double brPower) {
+
+        fl.setPower(flPower);
+        fr.setPower(frPower);
+        bl.setPower(blPower);
+        br.setPower(brPower);
     }
 
 }
@@ -429,12 +514,14 @@ class LimelightThread extends Thread {
 
     boolean scanGoalAngle = false;
     boolean scanObelisk = false;
+    boolean isBusy = false;
 
     @Override
     public void run() {
         while (running) {
             synchronized (this) {
                 try {
+                    isBusy = false;
                     wait(); // Sleep until notified (Save resources)
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -445,7 +532,14 @@ class LimelightThread extends Thread {
             if (!running) break; // check before doing work
 
             if(scanGoalAngle){
+                isBusy = true;
                 doScanGoalAngle();
+                scanGoalAngle = false;
+            }
+            else if(scanObelisk){
+                isBusy = true;
+                doScanObelisk();
+                scanObelisk = false;
             }
 
         }
@@ -453,14 +547,18 @@ class LimelightThread extends Thread {
 
     /// Limelight updates goalTx and goalTy
     public synchronized void scanGoalAngle(){
-        scanGoalAngle = true;
-        notify();
+        if(!isBusy) {
+            scanGoalAngle = true;
+            notify();
+        }
     }
 
     /// Limelight updates motif
     public synchronized void scanObelisk(){
-        scanObelisk = true;
-        notify();
+        if(!isBusy) {
+            scanObelisk = true;
+            notify();
+        }
     }
 
     /// Uses Limelight to detect Goal angle and update goalTx and goalTy.
@@ -474,7 +572,7 @@ class LimelightThread extends Thread {
         }
 
         // Set desired pipeline
-        switch (robot.team) {
+        switch (robot.alliance) {
             case BLUE:
                 selectedPipeline = robot.limelightBluePipeline;
                 break;
@@ -551,4 +649,132 @@ class LimelightThread extends Thread {
         running = false;
         notify();
     }
+
+    private void log(String message) {
+        robot.log("[LLThread] - " + message);
+    }
 }
+
+class AimAssist {
+
+    private ElapsedTime runtime = new ElapsedTime(ElapsedTime.Resolution.SECONDS);
+    private boolean active;
+    private boolean cancel;
+    private final double blueDesiredTx = -5;
+    private final double redDesiredTx = -5;
+    private final double tolerance = 1.5; // Get within 1.5 degrees of target
+    private final double minWheelPower = 0.1; // Smallest amount of power that still moves wheels
+
+    Config robot;
+
+    public AimAssist(Config robot) {this.robot = robot;}
+
+    /**
+     * Corrects robot heading to align with alliance goal.
+     * Unless opMode stops, timeOut, or cancelCorrection.
+     *
+     * @apiNote For cancelCorrection to work, this must be run in a different thread,
+     * as runCorrection utilizes a while loop to complete its task.
+     *
+     * @param timeOut Max time AimAssist can work in seconds.
+     */
+    public void runAngleCorrection(double timeOut) {
+
+        active = true;
+        runtime.reset();
+
+        double desiredTx;
+        if(robot.alliance == Config.Alliance.BLUE) {
+            desiredTx = blueDesiredTx;
+        }
+        else {
+            desiredTx = redDesiredTx;
+        }
+
+        log("Entering Loop.");
+        while(robot.opMode.opModeIsActive()) {
+
+            if(runtime.time() > timeOut) {
+                log("Exiting loop: time out.");
+                break;
+            }
+
+            if(cancel) {
+                log("Exiting loop: cancelled");
+                break;
+            }
+
+            // Motor Power Calculations
+            double distanceFromTarget = Math.abs(robot.goalTx - desiredTx);
+
+            // Scale factor determines how aggressively power increases with distance
+            double scaleFactor = 0.05;  // Expect to tune
+            double correctionPower = 0.1 + distanceFromTarget * scaleFactor;
+
+            // Clamp to max of 1.0
+            correctionPower = Math.min(correctionPower, 1.0);
+
+
+            // Correction
+            // Tx less than desired position
+            if(robot.goalTx < desiredTx - tolerance) {
+                // Rotate Left
+                robot.setWheelPower(-correctionPower, correctionPower, -correctionPower, correctionPower);
+            }
+            // Tx more than desired position
+            else if(robot.goalTx > desiredTx + tolerance) {
+                // Rotate Right
+                robot.setWheelPower(correctionPower, -correctionPower, correctionPower, -correctionPower);
+            }
+            // Tx in desired position
+            else {
+                robot.setWheelPower(0,0,0,0);
+                log("Exiting loop: target reached.");
+            }
+
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                log("Loop interrupted during sleep phase.");
+                throw new RuntimeException(e);
+            }
+
+        }
+        if(!robot.opMode.opModeIsActive()) {
+            log("Exiting loop: opMode is no longer active.");
+        }
+        robot.setWheelPower(0,0,0,0);
+        active = false;
+        cancel = false;
+        log("Exited Loop.");
+
+    }
+
+    /**
+     * Sets robot ideal launch velocity for current position
+     * using Limelight camera.
+     */
+    public void runPowerCalculation() {
+        robot.idealLauncherVelocity = 2500; // Regression equation here !!!
+    }
+
+
+    /**
+     * Cancels runCorrection.
+     */
+    public void cancelCorrection() {
+        if(active) {
+            cancel = true;
+        }
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    private void log(String message) {
+        robot.log("[AimAssist] - " + message);
+    }
+
+}
+
