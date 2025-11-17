@@ -481,9 +481,8 @@ class LauncherThread extends Thread {
         }
     }
 
-    private void setLauncherPower(double power) {
-        robot.leftLauncher.setPower(power);
-        robot.rightLauncher.setPower(power);
+    private void setLauncherVelocity(double velocity) {
+        robot.launcherMotor.setVelocity(velocity);
     }
 
     private void doLaunch(int artifactsToLaunch) {
