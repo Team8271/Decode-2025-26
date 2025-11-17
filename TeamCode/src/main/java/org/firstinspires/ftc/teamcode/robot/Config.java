@@ -49,7 +49,12 @@ public class Config {
     public double idealLauncherVelocity = 0; // 0-2500 effective range
 
     // Reference to opMode class
-    public final LinearOpMode opMode;
+    public final LinearOpMode linearOpMode;
+    public final OpMode opMode;
+
+    boolean usingLinearOpMode = false;
+
+    boolean opModeIsActive = false;
 
     // Define Motors
     public DcMotorEx fl, fr, bl, br,
