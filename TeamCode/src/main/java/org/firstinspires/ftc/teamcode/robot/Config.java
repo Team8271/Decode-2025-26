@@ -58,8 +58,7 @@ public class Config {
 
     // Define Motors
     public DcMotorEx fl, fr, bl, br,
-            agitator, leftLauncher, rightLauncher, launcherMotor,
-            kickerMotor;
+            agitator, launcherMotor;
 
     // Define Servos
     public Servo kickerServo, leftTilt, rightTilt, intakeServo;
@@ -175,29 +174,11 @@ public class Config {
         agitator.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         agitator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // Robot Facing Left Launcher Motor
-        leftLauncher = hwMap.get(DcMotorEx.class, "leftLauncher");
-        leftLauncher.setDirection(DcMotorSimple.Direction.FORWARD);
-        leftLauncher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        leftLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        // Robot Facing Right Launcher Motor
-        rightLauncher = hwMap.get(DcMotorEx.class, "rightLauncher");
-        rightLauncher.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightLauncher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
         // Modified Robot Launcher Motor
         launcherMotor = hwMap.get(DcMotorEx.class, "launcher");
-        launcherMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        launcherMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         launcherMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         launcherMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-
-        // Kicker Motor "spin-ny thing"
-        kickerMotor = hwMap.get(DcMotorEx.class, "kickerMotor");
-        kickerMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        kickerMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        kickerMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         // Kicker Servo - Transfers artifacts from agitator to launcher
         kickerServo = hwMap.get(Servo.class, "kickerServo");
