@@ -426,6 +426,15 @@ public class Config {
         br.setPower(brPower);
     }
 
+    public void runIntakeAssembly() {
+        intakeServo.setPosition(intakeServoOnPower);
+        agitator.setPower(agitatorActivePower);
+    }
+    public void stopIntakeAssembly() {
+        intakeServo.setPosition(intakeServerOffPower);
+        agitator.setPower(0);
+    }
+
 }
 
 /**
