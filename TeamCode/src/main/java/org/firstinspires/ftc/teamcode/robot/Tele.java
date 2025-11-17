@@ -11,7 +11,7 @@ public class Tele extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        robot = new Config(this);
+        robot = new Config(this,null);
         robot.init();
         boolean debounce = false;
         boolean launcherDebounce = false;
