@@ -473,8 +473,12 @@ class LauncherThread extends Thread {
         }
     }
 
-    public void waitWhileBusy() throws InterruptedException {
-        while(isBusy) sleep(50);
+    public void waitWhileBusy() {
+        try {
+            while(isBusy) sleep(50);
+        } catch (InterruptedException e) {
+            robot.log("[Launcher] - waitWhileBusy Interrupted: " + e);
+        }
     }
 
     private void setLauncherPower(double power) {
