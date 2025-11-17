@@ -16,6 +16,7 @@ public class SoloTele extends LinearOpMode {
         boolean debounce = false;
         boolean launcherDebounce = false;
         boolean launcherVelocityDebounce = false;
+        boolean changeAllianceDebounce = false;
         double agitatorPower = 0;
         double intakeServoTarget = 0.5;
 
@@ -43,6 +44,24 @@ public class SoloTele extends LinearOpMode {
 
             boolean increaseLauncherVelocity = gamepad1.right_bumper;
             boolean decreaseLauncherVelocity = gamepad1.left_bumper;
+
+            boolean changeAlliance = gamepad1.options;
+
+            if(changeAlliance && !changeAllianceDebounce) {
+                switch(robot.alliance) {
+                    case RED:
+                        robot.setAlliance(Config.Alliance.BLUE);
+                        break;
+                    case BLUE:
+                        robot.setAlliance(Config.Alliance.RED);
+                        break;
+                }
+                gamepad2.rumble(200);
+                changeAllianceDebounce = true;
+            }
+            if(!changeAlliance && changeAllianceDebounce) {
+                changeAllianceDebounce = false;
+            }
 
             if(increaseLauncherVelocity && !launcherVelocityDebounce) {
                 robot.idealLauncherVelocity += 100;
