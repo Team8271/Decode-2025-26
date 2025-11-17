@@ -45,8 +45,9 @@ public class Config {
     public final int motorRampUpTime = 300;
 
     // This value will be changed with Limelight sensing to get the ideal power
+    /// @deprecated in favor of launcher velocity
     public double idealLauncherPower = 1;
-    public double idealLauncherVelocity = 0; // 0-2500 effective range
+    public double idealLauncherVelocity = 1500; // 0-2500 effective range
 
     // Reference to opMode class
     public final LinearOpMode linearOpMode;
