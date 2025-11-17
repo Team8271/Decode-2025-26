@@ -223,7 +223,7 @@ public class Config {
 
         // Limelight3A Camera
         limelight = hwMap.get(Limelight3A.class, "limelight");
-        opMode.telemetry.setMsTransmissionInterval(11);
+
 
 
         // Build drivetrain for TweetyBird Use
