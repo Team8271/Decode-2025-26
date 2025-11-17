@@ -491,23 +491,27 @@ class LauncherThread extends Thread {
 
             robot.agitator.setPower(robot.agitatorActivePower);
 
-            setLauncherPower(robot.idealLauncherPower);
-            robot.kickerMotor.setPower(robot.kickerOnPower);
-            sleep(robot.motorRampUpTime); // Ramp up motors
+            setLauncherVelocity(robot.idealLauncherVelocity);
+            sleep(robot.motorRampUpTime); // Ramp up motor
             robot.kickerServo.setPosition(robot.activeKickerPosition);
             sleep(700);
             // Artifact One fully exited
             for (int i = 1; i <artifactsToLaunch; i++) {
+                robot.agitator.setPower(-robot.agitatorActivePower);
                 robot.kickerServo.setPosition(robot.storeKickerPosition);
-                sleep(400); // Waiting for artifact to clear kicker
+                sleep(200); // wait for lowering of kicker
+                robot.agitator.setPower(robot.agitatorActivePower);
+                sleep(400); // Waiting for artifact to enter kicker
                 robot.kickerServo.setPosition(robot.activeKickerPosition);
                 sleep(700); // Artifact X fully exited
             }
 
             // Go to IDLE mode
+            robot.agitator.setPower(-robot.agitatorActivePower);
             robot.kickerServo.setPosition(robot.storeKickerPosition);
-            robot.kickerMotor.setPower(robot.kickerIdlePower);
-            setLauncherPower(0);
+            sleep(200);
+            robot.agitator.setPower(agitatorStartPower);
+            setLauncherVelocity(0);
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
