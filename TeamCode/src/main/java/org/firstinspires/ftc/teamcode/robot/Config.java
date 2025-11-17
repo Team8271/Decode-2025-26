@@ -104,7 +104,9 @@ public class Config {
     public TweetyBird tweetyBird;
 
     // Pass opMode to config
-    public Config(LinearOpMode opMode) {this.opMode = opMode;}
+    public Config(LinearOpMode linearOpMode, OpMode opMode) {
+        this.linearOpMode = linearOpMode;
+        this.opMode = opMode;}
 
     /// Initialization Method
     public void init() {
@@ -112,7 +114,18 @@ public class Config {
         setAlliance(Alliance.BLUE);
 
         // Shorten HardwareMap for frequent use
-        HardwareMap hwMap = opMode.hardwareMap;
+        HardwareMap hwMap;
+
+        if(linearOpMode != null) {
+            hwMap = linearOpMode.hardwareMap;
+            linearOpMode.telemetry.setMsTransmissionInterval(11);
+            usingLinearOpMode = true;
+        }
+        else {
+            hwMap = opMode.hardwareMap;
+            opMode.telemetry.setMsTransmissionInterval(11);
+            usingLinearOpMode = false;
+        }
 
         // IMU
         imu = hwMap.get(IMU.class,"imu");
@@ -242,7 +255,7 @@ public class Config {
         tweetyBird = new TweetyBird.Builder()
                 .setDistanceBuffer(1) // Inch(es)
                 .setDriver(mecanum)
-                .setLinearOpMode(opMode)
+                .setLinearOpMode(linearOpMode)
                 .setMaximumSpeed(0.5)
                 .setMinimumSpeed(0.2)
                 .setOdometer(odometer)
@@ -250,6 +263,15 @@ public class Config {
                 .setLoggingEnabled(true)
                 .build();
         odometer.resetTo(0,0,0);
+    }
+
+    public boolean opModeisActive() {
+        if(usingLinearOpMode) {
+            return linearOpMode.opModeIsActive();
+        }
+        else {
+            return opModeIsActive;
+        }
     }
 
     /// Set team for launching system etc.
@@ -692,7 +714,7 @@ class AimAssist {
         }
 
         log("Entering Loop.");
-        while(robot.opMode.opModeIsActive()) {
+        while(robot.opModeisActive()) {
 
             if(runtime.time() > timeOut) {
                 log("Exiting loop: time out.");
@@ -740,7 +762,7 @@ class AimAssist {
             }
 
         }
-        if(!robot.opMode.opModeIsActive()) {
+        if(!robot.opModeisActive()) {
             log("Exiting loop: opMode is no longer active.");
         }
         robot.setWheelPower(0,0,0,0);
