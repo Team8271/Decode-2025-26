@@ -39,15 +39,10 @@ public class RedCloseAuto extends OpMode {
     private final Pose toPickup2Pose = new Pose(94, 63, Math.toRadians(360)); // Middle (Second Set) of Artifacts from the Spike Mark.
     private final Pose pickup2Pose = new Pose(135, 63, Math.toRadians(360)); // !!!!!
 
-    private final Pose exitGrabPickup2Pose = new Pose(94,63, Math.toRadians(360));
-
-    private final Pose toPickup3Pose = new Pose(94, 37, Math.toRadians(360)); // Lowest (Third Set) of Artifacts from the Spike Mark.
-    private final Pose pickup3Pose = new Pose(114, 37, Math.toRadians(360)); // !!!!!
-
-    private final Pose parkPose = new Pose(94,115, Math.toRadians(36));
+    private final Pose exitGrabPickup2Pose = new Pose(105,63, Math.toRadians(360));
 
     private Path scorePreload;
-    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2, exitGrabPickup2, scorePickup2, toPickup3, grabPickup3, scorePickup3, park;
+    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2, exitGrabPickup2;
 
     private double pickupSpeed = 0.3;
 
@@ -90,34 +85,6 @@ public class RedCloseAuto extends OpMode {
         exitGrabPickup2 = follower.pathBuilder()
                 .addPath(new BezierLine(pickup2Pose, exitGrabPickup2Pose))
                 .setLinearHeadingInterpolation(pickup2Pose.getHeading(),exitGrabPickup2Pose.getHeading())
-                .build();
-
-        /* This is our scorePickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        scorePickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(toPickup2Pose, scorePose))
-                .setLinearHeadingInterpolation(toPickup2Pose.getHeading(), scorePose.getHeading())
-                .build();
-
-        /* This is our grabPickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        toPickup3 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, toPickup3Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), toPickup3Pose.getHeading())
-                .build();
-
-        grabPickup3 = follower.pathBuilder()
-                .addPath(new BezierLine(toPickup3Pose, pickup3Pose))
-                .setLinearHeadingInterpolation(toPickup3Pose.getHeading(), pickup3Pose.getHeading())
-                .build();
-
-        /* This is our scorePickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        scorePickup3 = follower.pathBuilder()
-                .addPath(new BezierLine(toPickup3Pose, scorePose))
-                .setLinearHeadingInterpolation(toPickup3Pose.getHeading(), scorePose.getHeading())
-                .build();
-
-        park = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, parkPose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), parkPose.getHeading())
                 .build();
 
     }
@@ -167,6 +134,7 @@ public class RedCloseAuto extends OpMode {
                     follower.followPath(grabPickup1, pickupSpeed, true);
                     setPathState(3);
                 }
+                break;
             case 3:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
                 if (!follower.isBusy()) {
@@ -203,88 +171,6 @@ public class RedCloseAuto extends OpMode {
                     setPathState(-1);
                 }
                 break;
-            case 5:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
-                if (!follower.isBusy()) {
-                    follower.followPath(scorePickup2, true);
-                    setPathState(50);
-                }
-                break;
-            case 50:
-                if (!follower.isBusy()) {
-                    launch();
-                    setPathState(500);
-                }
-                break;
-            case 500: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
-                if (!waitingForLauncher) {
-                    follower.followPath(toPickup3, true);
-                    setPathState(6);
-                }
-                break;
-            case 6:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup2Pose's position */
-                if (!follower.isBusy()) {
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(grabPickup3, pickupSpeed, true);
-                    setPathState(7);
-                }
-                break;
-            case 7:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
-                if (!follower.isBusy()) {
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(scorePickup3, true);
-                    setPathState(70);
-                }
-                break;
-            case 70:
-                if (!follower.isBusy()) {
-                    launch();
-                    setPathState(700);
-                }
-                break;
-            case 700: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
-                if (!waitingForLauncher) {
-                    follower.followPath(toPickup3, true);
-                    setPathState(8);
-                }
-                break;
-            case 8:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
-                if (!follower.isBusy()) {
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup3, pickupSpeed, true);
-                    setPathState(9);
-                }
-            case 9:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup3Pose's position */
-                if (!follower.isBusy()) {
-                    follower.followPath(scorePickup3, true);
-                    setPathState(90);
-                }
-                break;
-            case 90:
-                if (!follower.isBusy()) {
-                    launch();
-                    setPathState(900);
-                }
-                break;
-            case 900: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
-                if (!waitingForLauncher) {
-                    follower.followPath(park, false);
-                    robot.stopIntakeAssembly();
-                    setOpModeIsActive(false);
-                    setPathState(-1);
-                }
-                break;
-            case 10: // Park
-                if(waitingForLauncher) {
-                    // CANCEL LAUNCH
-                    // !! !! !! !! !! !!
-                }
-                follower.followPath(park);
-                robot.stopIntakeAssembly();
 
         }
     }
@@ -375,7 +261,7 @@ public class RedCloseAuto extends OpMode {
     }
 
     private void log(String message) {
-        robot.log("[ExampleAuto] - " + message);
+        robot.log("[RedCloseAuto] - " + message);
     }
 
     private void launch() {

@@ -12,8 +12,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-@Autonomous(name = "Blue Far Auto")
-public class BlueFarAuto extends OpMode {
+@Autonomous(name = "Blue SHORTSTOP Close Auto")
+public class BlueSHORTSTOPCloseAuto extends OpMode {
 
     Config robot;
 
@@ -29,22 +29,19 @@ public class BlueFarAuto extends OpMode {
 
     private int pathState;
 
-    private final Pose startPose = new Pose(56, 12, Math.toRadians(90)); // Start Pose of robot.
-    private final Pose scorePose = new Pose(50, 100, Math.toRadians(135)); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
+    private final Pose startPose = new Pose(27, 132, Math.toRadians(144)); // Start Pose of robot.
+    private final Pose scorePose = new Pose(50, 100, Math.toRadians(144)); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
     private final Pose scorePose1 = new Pose(50, 100, Math.toRadians(135)); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
 
-    private final Pose toPickup1Pose = new Pose(50, 86, Math.toRadians(180));// Highest (First Set) of Artifacts from the Spike Mark.
+    private final Pose toPickup1Pose = new Pose(50, 86, Math.toRadians(180)); // Highest (First Set) of Artifacts from the Spike Mark.
     private final Pose pickup1Pose = new Pose(18, 86, Math.toRadians(180));
 
-    private final Pose toPickup2Pose = new Pose(50, 64, Math.toRadians(180)); // Middle (Second Set) of Artifacts from the Spike Mark.
-    private final Pose pickup2Pose = new Pose(11, 64, Math.toRadians(180));
-
-    private final Pose exitGrabPickup2Pose = new Pose(20,63,Math.toRadians(180));
+    private final Pose parkPose = new Pose(50,115, Math.toRadians(144));
 
     private Path scorePreload;
-    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2, exitGrabPickup2;
+    private PathChain toPickup1, grabPickup1, scorePickup1, park;
 
-    private double pickupSpeed = 0.25;
+    private double pickupSpeed = 0.3;
 
     public void buildPaths() {
         /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
@@ -71,22 +68,10 @@ public class BlueFarAuto extends OpMode {
                 .setLinearHeadingInterpolation(toPickup1Pose.getHeading(), scorePose1.getHeading())
                 .build();
 
-        /* This is our grabPickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        toPickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, toPickup2Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), toPickup2Pose.getHeading())
+        park = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose1, parkPose))
+                .setLinearHeadingInterpolation(scorePose1.getHeading(), parkPose.getHeading())
                 .build();
-
-        grabPickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(toPickup2Pose, pickup2Pose))
-                .setLinearHeadingInterpolation(toPickup2Pose.getHeading(), pickup2Pose.getHeading())
-                .build();
-
-        exitGrabPickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup2Pose, exitGrabPickup2Pose))
-                .setLinearHeadingInterpolation(pickup2Pose.getHeading(),exitGrabPickup2Pose.getHeading())
-                .build();
-
     }
 
     public void autonomousPathUpdate() throws InterruptedException {
@@ -149,25 +134,9 @@ public class BlueFarAuto extends OpMode {
                     setPathState(300);
                 }
                 break;
-            case 300: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
+            case 301: // WAITING FOR LAUNCHER TO FINISH BEFORE PARKING
                 if (!waitingForLauncher) {
-                    follower.followPath(toPickup2, true);
-                    setPathState(4);
-                }
-                break;
-            case 4:
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
-                if (!follower.isBusy()) {
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup2, pickupSpeed, true);
-                    setPathState(401); // Pre parking
-                }
-                break;
-            case 401:
-                if(!follower.isBusy()) {
-                    follower.followPath(exitGrabPickup2,true);
-                    robot.stopIntakeAssembly();
-                    robot.launcherMotor.setVelocity(0);
+                    follower.followPath(park, true);
                     setPathState(-1);
                 }
                 break;
@@ -261,7 +230,7 @@ public class BlueFarAuto extends OpMode {
     }
 
     private void log(String message) {
-        robot.log("[BlueFarAuto] - " + message);
+        robot.log("[BlueSHORTSTOPCloseAuto] - " + message);
     }
 
     private void launch() {
