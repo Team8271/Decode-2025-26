@@ -25,7 +25,7 @@ public class Constants {
             .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.022, 0, 0.00001, 0.6,0.01))
             .centripetalScaling(0.0004);
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 0.9, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 0.8, 1);
 
     public static ThreeWheelConstants localizerConstants = new ThreeWheelConstants()
             .forwardTicksToInches(.0029258769839086633)
