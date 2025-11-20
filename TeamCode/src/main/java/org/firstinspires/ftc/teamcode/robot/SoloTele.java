@@ -40,12 +40,17 @@ public class SoloTele extends LinearOpMode {
             boolean launchThreeArtifacts = gamepad1.y;
             boolean activateAgitatorAssembly = gamepad1.b;
             boolean activateAimAssist = gamepad1.dpad_right;
-            boolean abort = gamepad1.options;
+            boolean abort = gamepad1.back;
 
             boolean increaseLauncherVelocity = gamepad1.right_bumper;
             boolean decreaseLauncherVelocity = gamepad1.left_bumper;
 
             boolean changeAlliance = gamepad1.options;
+
+            if(activateAimAssist && !robot.aimAssist.isActive()) {
+                robot.limelightThread.scanGoalAngle();
+                robot.aimAssist.runAngleCorrection(3);
+            }
 
             if(changeAlliance && !changeAllianceDebounce) {
                 switch(robot.alliance) {
@@ -140,7 +145,7 @@ public class SoloTele extends LinearOpMode {
 
             telemetry.addData("Launcher Velocity", robot.idealLauncherVelocity);
             telemetry.addData("\nTx", robot.goalTx);
-            telemetry.addData("Ty", robot.goalTy);
+            telemetry.addData("AvgDist", robot.goalAvgDist);
 
             // One Driver Telemetry
             telemetry.addLine("" +

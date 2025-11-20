@@ -63,6 +63,8 @@ public class DuoTele extends LinearOpMode {
                 changeAllianceDebounce = false;
             }
 
+            /*
+
             if(increaseLauncherVelocity && !launcherVelocityDebounce) {
                 robot.idealLauncherVelocity += 100;
                 robot.log("Tele - Trying to increase launcher vel");
@@ -77,13 +79,19 @@ public class DuoTele extends LinearOpMode {
                 launcherVelocityDebounce = false;
             }
 
+             */
+
 
             if (launchOneArtifact && !launcherDebounce) {
                 robot.launcherThread.launch(1);
+                gamepad1.rumble(0.8,0.8,125);
+                gamepad2.rumble(0.8,0.8,125);
                 launcherDebounce = true;
             }
             if (launchThreeArtifacts && !launcherDebounce) {
                 robot.launcherThread.launch(3);
+                gamepad1.rumble(0.8,0.8,125);
+                gamepad2.rumble(0.8,0.8,125);
                 launcherDebounce = true;
             }
             if (!launchOneArtifact && !launchThreeArtifacts && launcherDebounce) {
@@ -140,7 +148,7 @@ public class DuoTele extends LinearOpMode {
 
             telemetry.addData("Launcher Velocity", robot.idealLauncherVelocity);
             telemetry.addData("\nTx", robot.goalTx);
-            telemetry.addData("Ty", robot.goalTy);
+            telemetry.addData("AvgDist", robot.goalAvgDist);
 
             // One Driver Telemetry
             telemetry.addLine("" +
