@@ -28,7 +28,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 import dev.narlyx.tweetybird.Drivers.Mecanum;
 import dev.narlyx.tweetybird.Odometers.ThreeWheeled;
@@ -38,16 +37,19 @@ import dev.narlyx.tweetybird.TweetyBird;
 public class Config {
 
     // Changeable Power Values
-    public final double kickerIdlePower = 0, kickerOnPower = 1,
-        storeKickerPosition = 0.5, activeKickerPosition = 1,
-        agitatorActivePower = 1;
+    public final double
+        agitatorActivePower = 1, intakeServoOnPower = 1, intakeServerOffPower = 0.5;
 
-    public final int motorRampUpTime = 300;
+    private final double
+        storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1-storeLeftKickerPosition,
+        activeLeftKickerPosition = 0, activeRightKickerPosition = 1-activeLeftKickerPosition;
+
+    public final int motorRampUpTime = 3000;
 
     // This value will be changed with Limelight sensing to get the ideal power
     /// @deprecated in favor of launcher velocity
     public double idealLauncherPower = 1;
-    public double idealLauncherVelocity = 1500; // 0-2500 effective range
+    public double idealLauncherVelocity = 2200; // !! WARNING, VALUE USED IN AUTO... 0-2500 effective range
 
     // Reference to opMode class
     public final LinearOpMode linearOpMode;
@@ -62,7 +64,8 @@ public class Config {
             agitator, launcherMotor;
 
     // Define Servos
-    public Servo kickerServo, leftTilt, rightTilt, intakeServo;
+    private Servo leftKickerServo, rightKickerServo;
+    public Servo intakeServo;
 
     // Other Hardware
     public Limelight3A limelight;
@@ -77,6 +80,7 @@ public class Config {
     public boolean goalAnglesAreValid;
     public double goalTx;
     public double goalTy;
+    public double goalAvgDist;
 
     public Motif motif;
 
@@ -118,6 +122,7 @@ public class Config {
     public void init() {
         motif = Motif.NULL;
         setAlliance(Alliance.BLUE);
+        opModeIsActive = false;
 
         // Shorten HardwareMap for frequent use
         HardwareMap hwMap;
@@ -182,8 +187,10 @@ public class Config {
         launcherMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         // Kicker Servo - Transfers artifacts from agitator to launcher
-        kickerServo = hwMap.get(Servo.class, "kickerServo");
-        kickerServo.setPosition(storeKickerPosition);
+        leftKickerServo = hwMap.get(Servo.class, "lKickerServo");
+        leftKickerServo.setPosition(storeLeftKickerPosition);
+        rightKickerServo = hwMap.get(Servo.class, "rKickerServo");
+        rightKickerServo.setPosition(storeRightKickerPosition);
         intakeServo = hwMap.get(Servo.class, "intakeServo");
 
         // Launcher Multithreading
@@ -435,6 +442,15 @@ public class Config {
         agitator.setPower(0);
     }
 
+    public void activateKicker() {
+        leftKickerServo.setPosition(activeLeftKickerPosition);
+        rightKickerServo.setPosition(activeRightKickerPosition);
+    }
+    public void storeKicker() {
+        leftKickerServo.setPosition(storeLeftKickerPosition);
+        rightKickerServo.setPosition(storeRightKickerPosition);
+    }
+
 }
 
 /**
@@ -447,6 +463,7 @@ class LauncherThread extends Thread {
 
     private int artifactsToLaunch = 0;
     private volatile boolean isBusy = false;
+    private volatile boolean holdPower = false;
 
     private volatile boolean running = true; // When false, thread terminates
 
@@ -455,6 +472,7 @@ class LauncherThread extends Thread {
         while (running) {
             synchronized (this) {
                 try {
+                    log("Entering loop wait.");
                     wait(); // Sleep until notified (Save resources)
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -465,53 +483,64 @@ class LauncherThread extends Thread {
             if (!running) break; // check before doing work
 
             isBusy = true;
+            log("Set isBusy true in run.");
 
-            doLaunch(artifactsToLaunch);
+            doLaunch(artifactsToLaunch, holdPower);
+
 
             isBusy = false;
+            log("Reached end of run loop.");
 
         }
     }
 
     public void waitWhileBusy() {
-        try {
-            while(isBusy) sleep(50);
-        } catch (InterruptedException e) {
-            robot.log("[Launcher] - waitWhileBusy Interrupted: " + e);
-        }
+        while(isBusy && robot.opModeIsActive);
+    }
+
+    public boolean isBusy() {
+        return isBusy;
     }
 
     private void setLauncherVelocity(double velocity) {
         robot.launcherMotor.setVelocity(velocity);
     }
 
-    private void doLaunch(int artifactsToLaunch) {
+    private void doLaunch(int artifactsToLaunch, boolean keepPower) {
         try {
             double agitatorStartPower = robot.agitator.getPower();
 
             robot.agitator.setPower(robot.agitatorActivePower);
 
+            //robot.aimAssist.runAngleCorrection(5);
+            //robot.aimAssist.runPowerCalculation();
+
             setLauncherVelocity(robot.idealLauncherVelocity);
             sleep(robot.motorRampUpTime); // Ramp up motor
-            robot.kickerServo.setPosition(robot.activeKickerPosition);
-            sleep(700);
+            robot.activateKicker();
+            sleep(900);
             // Artifact One fully exited
             for (int i = 1; i <artifactsToLaunch; i++) {
-                robot.agitator.setPower(-robot.agitatorActivePower);
-                robot.kickerServo.setPosition(robot.storeKickerPosition);
-                sleep(200); // wait for lowering of kicker
+                robot.agitator.setPower(-robot.agitatorActivePower/2);
+                robot.storeKicker();
+                sleep(300); // wait for lowering of kicker
                 robot.agitator.setPower(robot.agitatorActivePower);
-                sleep(400); // Waiting for artifact to enter kicker
-                robot.kickerServo.setPosition(robot.activeKickerPosition);
-                sleep(700); // Artifact X fully exited
+                sleep(600); // Waiting for artifact to enter kicker
+                robot.activateKicker();
+                sleep(900); // Artifact X fully exited
             }
 
             // Go to IDLE mode
             robot.agitator.setPower(-robot.agitatorActivePower);
-            robot.kickerServo.setPosition(robot.storeKickerPosition);
+            robot.storeKicker();
             sleep(200);
             robot.agitator.setPower(agitatorStartPower);
-            setLauncherVelocity(0);
+            if(!keepPower) {
+                setLauncherVelocity(0);
+                isBusy = false;
+            }
+            else {isBusy = false;}
+
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -527,6 +556,16 @@ class LauncherThread extends Thread {
         this.artifactsToLaunch = artifactsToLaunch;
         notify();
     }
+    public synchronized void launch(int artifactsToLaunch, boolean holdPower) {
+        this.holdPower = holdPower;
+        this.artifactsToLaunch = artifactsToLaunch;
+        notify();
+    }
+
+    private void log(String message) {
+        robot.log("[LauncherThread] - " + message);
+    }
+
 }
 
 /**
@@ -624,6 +663,7 @@ class LimelightThread extends Thread {
             robot.goalAnglesAreValid = true;
             robot.goalTx = result.getTx();
             robot.goalTy = result.getTy();
+            robot.goalAvgDist = result.getBotposeAvgDist();
         }
         else {
             robot.goalAnglesAreValid = false;
@@ -688,12 +728,17 @@ class AimAssist {
     private boolean cancel;
     private final double blueDesiredTx = -5;
     private final double redDesiredTx = -5;
-    private final double tolerance = 1.5; // Get within 1.5 degrees of target
+    private final double tolerance = 3; // Get within x degrees of target
     private final double minWheelPower = 0.1; // Smallest amount of power that still moves wheels
+    private double correctionPower = 0.3;
+    private double scaleFactor = 0.05;
 
     Config robot;
 
-    public AimAssist(Config robot) {this.robot = robot;}
+    public AimAssist(Config robot) {
+        this.robot = robot;
+        log("Ready.");
+    }
 
     /**
      * Corrects robot heading to align with alliance goal.
@@ -706,73 +751,50 @@ class AimAssist {
      */
     public void runAngleCorrection(double timeOut) {
 
-        active = true;
+        ElapsedTime runtime = new ElapsedTime();
         runtime.reset();
 
+        robot.limelightThread.scanGoalAngle();
+
+        if(!robot.goalAnglesAreValid) {
+            log("Goal Angles Invalid, Cancelling.");
+            return;
+        }
+
         double desiredTx;
-        if(robot.alliance == Config.Alliance.BLUE) {
-            desiredTx = blueDesiredTx;
+
+        if(robot.alliance == Config.Alliance.RED) {
+            desiredTx = redDesiredTx;
+            log("Correcting for Red.");
         }
         else {
-            desiredTx = redDesiredTx;
+            desiredTx = blueDesiredTx;
+            log("Correcting for Blue.");
         }
 
-        log("Entering Loop.");
-        while(robot.opModeisActive()) {
+        log("Entering loop.");
+        while(robot.opModeisActive() && timeOut > runtime.time()) {
+            robot.limelightThread.scanGoalAngle();
 
-            if(runtime.time() > timeOut) {
-                log("Exiting loop: time out.");
+            double distance = Math.abs(robot.goalTx - desiredTx);
+            correctionPower = Range.clip(distance*scaleFactor, 0.1, 0.2);
+
+
+            if(distance < 0.5) {
+                log("Within tolerance, Closing Loop...");
                 break;
             }
-
-            if(cancel) {
-                log("Exiting loop: cancelled");
-                break;
+            else if(robot.goalTx > desiredTx) {
+                // Rotate right
+                robot.setWheelPower(correctionPower,-correctionPower,correctionPower,-correctionPower);
             }
-
-            // Motor Power Calculations
-            double distanceFromTarget = Math.abs(robot.goalTx - desiredTx);
-
-            // Scale factor determines how aggressively power increases with distance
-            double scaleFactor = 0.05;  // Expect to tune
-            double correctionPower = 0.1 + distanceFromTarget * scaleFactor;
-
-            // Clamp to max of 1.0
-            correctionPower = Math.min(correctionPower, 1.0);
-
-
-            // Correction
-            // Tx less than desired position
-            if(robot.goalTx < desiredTx - tolerance) {
-                // Rotate Left
-                robot.setWheelPower(-correctionPower, correctionPower, -correctionPower, correctionPower);
+            else if(robot.goalTx < desiredTx) {
+                // Rotate left
+                robot.setWheelPower(-correctionPower,correctionPower,-correctionPower,correctionPower);
             }
-            // Tx more than desired position
-            else if(robot.goalTx > desiredTx + tolerance) {
-                // Rotate Right
-                robot.setWheelPower(correctionPower, -correctionPower, correctionPower, -correctionPower);
-            }
-            // Tx in desired position
-            else {
-                robot.setWheelPower(0,0,0,0);
-                log("Exiting loop: target reached.");
-            }
-
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                log("Loop interrupted during sleep phase.");
-                throw new RuntimeException(e);
-            }
-
-        }
-        if(!robot.opModeisActive()) {
-            log("Exiting loop: opMode is no longer active.");
         }
         robot.setWheelPower(0,0,0,0);
-        active = false;
-        cancel = false;
-        log("Exited Loop.");
+        log("Loop Closed.");
 
     }
 
@@ -781,7 +803,20 @@ class AimAssist {
      * using Limelight camera.
      */
     public void runPowerCalculation() {
-        robot.idealLauncherVelocity = 2500; // Regression equation here !!!
+
+        double x = robot.goalTy;
+        robot.idealLauncherVelocity = -2.46914*Math.pow(x,3)+74.07407*Math.pow(x,2)-751.85185*x+3880.24691;
+        log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
+
+
+
+        /*
+        double x = robot.goalAvgDist;
+        robot.idealLauncherVelocity = (989.29847*x)+255.92292;
+        log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
+
+         */
+
     }
 
 
