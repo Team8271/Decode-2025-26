@@ -41,10 +41,13 @@ public class BlueCloseAuto extends OpMode {
 
     private final Pose exitGrabPickup2Pose = new Pose(30,63,Math.toRadians(180));
 
+    private final Pose toPickup3Pose = new Pose(50, 37, Math.toRadians(180)); // Lowest (Third Set) of Artifacts from the Spike Mark.
+    private final Pose pickup3Pose = new Pose(30, 37, Math.toRadians(180));
+
     private final Pose parkPose = new Pose(50,115, Math.toRadians(144));
 
     private Path scorePreload;
-    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2, exitGrabPickup2, park;
+    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2, exitGrabPickup2, scorePickup2, toPickup3, grabPickup3, scorePickup3, park;
 
     private double pickupSpeed = 0.3;
 
@@ -87,6 +90,29 @@ public class BlueCloseAuto extends OpMode {
         exitGrabPickup2 = follower.pathBuilder()
                 .addPath(new BezierLine(pickup2Pose, exitGrabPickup2Pose))
                 .setLinearHeadingInterpolation(pickup2Pose.getHeading(),exitGrabPickup2Pose.getHeading())
+                .build();
+
+        /* This is our scorePickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
+        scorePickup2 = follower.pathBuilder()
+                .addPath(new BezierLine(toPickup2Pose, scorePose))
+                .setLinearHeadingInterpolation(toPickup2Pose.getHeading(), scorePose.getHeading())
+                .build();
+
+        /* This is our grabPickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
+        toPickup3 = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose, toPickup3Pose))
+                .setLinearHeadingInterpolation(scorePose.getHeading(), toPickup3Pose.getHeading())
+                .build();
+
+        grabPickup3 = follower.pathBuilder()
+                .addPath(new BezierLine(toPickup3Pose, pickup3Pose))
+                .setLinearHeadingInterpolation(toPickup3Pose.getHeading(), pickup3Pose.getHeading())
+                .build();
+
+        /* This is our scorePickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
+        scorePickup3 = follower.pathBuilder()
+                .addPath(new BezierLine(toPickup3Pose, scorePose))
+                .setLinearHeadingInterpolation(toPickup3Pose.getHeading(), scorePose.getHeading())
                 .build();
 
         park = follower.pathBuilder()
