@@ -27,6 +27,8 @@ public class SoloTele extends LinearOpMode {
 
         waitForStart();
 
+        robot.runIntakeAssembly();
+
         while (opModeIsActive()) {
 
             // Merged Driver Controls
@@ -41,6 +43,7 @@ public class SoloTele extends LinearOpMode {
             boolean activateAgitatorAssembly = gamepad1.b;
             boolean activateAimAssist = gamepad1.dpad_right;
             boolean abort = gamepad1.back;
+            boolean reverseAgitator = gamepad1.x;
 
             boolean increaseLauncherVelocity = gamepad1.right_bumper;
             boolean decreaseLauncherVelocity = gamepad1.left_bumper;
@@ -100,18 +103,26 @@ public class SoloTele extends LinearOpMode {
                     agitatorPower = 0;
                     intakeServoTarget = 0.5;
                 }
+                else if(agitatorPower == -1) {
+                    agitatorPower = 1;
+                }
                 else {
                     agitatorPower = 1;
                     intakeServoTarget = 1;
                 }
                 debounce = true;
             }
+            if (reverseAgitator && !debounce) {
+                agitatorPower = -1;
+            }
 
-            if (!activateAgitatorAssembly && debounce) {
+            if (!activateAgitatorAssembly && !reverseAgitator && debounce) {
                 debounce = false;
             }
 
-            robot.agitator.setPower(agitatorPower);
+            if(!robot.launcherThread.isBusy()) {
+                robot.agitator.setPower(agitatorPower);
+            }
             robot.intakeServo.setPosition(intakeServoTarget);
 
             // FCD reset

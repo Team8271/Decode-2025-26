@@ -41,6 +41,7 @@ public class DuoTele extends LinearOpMode {
             boolean launchOneArtifact = gamepad2.a;
             boolean launchThreeArtifacts = gamepad2.y;
             boolean activateAgitatorAssembly = gamepad2.b;
+            boolean reverseAgitator = gamepad2.x;
 
             boolean increaseLauncherVelocity = gamepad2.right_bumper;
             boolean decreaseLauncherVelocity = gamepad2.left_bumper;
@@ -103,18 +104,26 @@ public class DuoTele extends LinearOpMode {
                     agitatorPower = 0;
                     intakeServoTarget = 0.5;
                 }
+                else if(agitatorPower == -1) {
+                    agitatorPower = 1;
+                }
                 else {
                     agitatorPower = 1;
                     intakeServoTarget = 1;
                 }
                 debounce = true;
             }
+            if (reverseAgitator && !debounce) {
+                agitatorPower = -1;
+            }
 
-            if (!activateAgitatorAssembly && debounce) {
+            if (!activateAgitatorAssembly && !reverseAgitator && debounce) {
                 debounce = false;
             }
 
-            robot.agitator.setPower(agitatorPower);
+            if(!robot.launcherThread.isBusy()) {
+                robot.agitator.setPower(agitatorPower);
+            }
             robot.intakeServo.setPosition(intakeServoTarget);
 
             // FCD reset
