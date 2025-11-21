@@ -30,13 +30,13 @@ public class RedSHORTSTOPCloseAuto extends OpMode {
     private int pathState;
 
     private final Pose startPose = new Pose(117, 132, Math.toRadians(36)); // Start Pose of robot.
-    private final Pose scorePose = new Pose(94, 100, Math.toRadians(45)); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
+    private final Pose scorePose = new Pose(94, 100, Math.toRadians(44)); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
     private final Pose scorePose1 = new Pose(94,100, Math.toRadians(45));
 
     private final Pose toPickup1Pose = new Pose(94, 86, Math.toRadians(360)); // Highest (First Set) of Artifacts from the Spike Mark.
     private final Pose pickup1Pose = new Pose(127, 86, Math.toRadians(360)); // !!!!!
 
-    private final Pose parkPose = new Pose(94,115, Math.toRadians(39));
+    private final Pose parkPose = new Pose(94,120, Math.toRadians(360));
 
     private Path scorePreload;
     private PathChain toPickup1, grabPickup1, scorePickup1, park;

@@ -36,7 +36,7 @@ public class BlueSHORTSTOPCloseAuto extends OpMode {
     private final Pose toPickup1Pose = new Pose(50, 86, Math.toRadians(180)); // Highest (First Set) of Artifacts from the Spike Mark.
     private final Pose pickup1Pose = new Pose(18, 86, Math.toRadians(180));
 
-    private final Pose parkPose = new Pose(50,115, Math.toRadians(144));
+    private final Pose parkPose = new Pose(50,120, Math.toRadians(180));
 
     private Path scorePreload;
     private PathChain toPickup1, grabPickup1, scorePickup1, park;
@@ -131,12 +131,14 @@ public class BlueSHORTSTOPCloseAuto extends OpMode {
             case 30:
                 if (!follower.isBusy()) {
                     launch();
-                    setPathState(300);
+                    setPathState(301);
                 }
                 break;
             case 301: // WAITING FOR LAUNCHER TO FINISH BEFORE PARKING
                 if (!waitingForLauncher) {
                     follower.followPath(park, true);
+                    robot.stopIntakeAssembly();
+                    robot.launcherMotor.setVelocity(0);
                     setPathState(-1);
                 }
                 break;
