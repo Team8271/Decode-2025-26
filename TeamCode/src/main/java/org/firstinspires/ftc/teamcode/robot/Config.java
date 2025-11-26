@@ -1,26 +1,33 @@
 package org.firstinspires.ftc.teamcode.robot;
 
+import android.util.Log;
+
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ReadWriteFile;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import dev.narlyx.tweetybird.Drivers.Mecanum;
 import dev.narlyx.tweetybird.Odometers.ThreeWheeled;
@@ -29,31 +36,36 @@ import dev.narlyx.tweetybird.TweetyBird;
 /// Configuration class
 public class Config {
 
-    private static final Logger log = LoggerFactory.getLogger(Config.class);
-
-    // Log file writer
-    protected BufferedWriter logWriter = null;
-
     // Changeable Power Values
-    public final double kickerIdlePower = 0, kickerOnPower = 1,
-        storeKickerPosition = 0.5, activeKickerPosition = 1,
-        agitatorActivePower = 1;
+    public final double
+        agitatorActivePower = 1, intakeServoOnPower = 1, intakeServerOffPower = 0.5;
 
-    public final int motorRampUpTime = 300;
+    private final double
+        storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1-storeLeftKickerPosition,
+        activeLeftKickerPosition = 0, activeRightKickerPosition = 1-activeLeftKickerPosition;
+
+    public final int motorRampUpTime = 3000;
 
     // This value will be changed with Limelight sensing to get the ideal power
+    /// @deprecated in favor of launcher velocity
     public double idealLauncherPower = 1;
+    public double idealLauncherVelocity = 1900; // !! WARNING, VALUE USED IN AUTO... 0-2500 effective range
 
     // Reference to opMode class
-    public final LinearOpMode opMode;
+    public final LinearOpMode linearOpMode;
+    public final OpMode opMode;
+
+    boolean usingLinearOpMode = false;
+
+    boolean opModeIsActive = false;
 
     // Define Motors
     public DcMotorEx fl, fr, bl, br,
-            agitator, leftLauncher, rightLauncher,
-            kickerMotor;
+            agitator, launcherMotor;
 
     // Define Servos
-    public Servo kickerServo, leftTilt, rightTilt, intakeServo;
+    private Servo leftKickerServo, rightKickerServo;
+    public Servo intakeServo;
 
     // Other Hardware
     public Limelight3A limelight;
@@ -68,9 +80,14 @@ public class Config {
     public boolean goalAnglesAreValid;
     public double goalTx;
     public double goalTy;
+    public double goalAvgDist;
+
     public Motif motif;
+
     public LauncherThread launcherThread;
     public LimelightThread limelightThread;
+
+    public AimAssist aimAssist;
 
     // enums
     public enum Motif {
@@ -79,11 +96,17 @@ public class Config {
         PPG,    // AprilTag 23
         NULL;
     }
-    public enum Team {
+    public enum Alliance {
         RED,
         BLUE;
     }
-    Team team;
+    public enum DriverAmount {
+        ONE_DRIVER,
+        TWO_DRIVERS,
+        DEV_DRIVER
+    }
+    Alliance alliance;
+    DriverAmount driverAmount;
 
     // TweetyBird Classes
     public ThreeWheeled odometer;
@@ -91,15 +114,29 @@ public class Config {
     public TweetyBird tweetyBird;
 
     // Pass opMode to config
-    public Config(LinearOpMode opMode) {this.opMode = opMode;}
+    public Config(LinearOpMode linearOpMode, OpMode opMode) {
+        this.linearOpMode = linearOpMode;
+        this.opMode = opMode;}
 
     /// Initialization Method
     public void init() {
         motif = Motif.NULL;
-        setTeam(Team.BLUE);
+        setAlliance(Alliance.BLUE);
+        opModeIsActive = false;
 
         // Shorten HardwareMap for frequent use
-        HardwareMap hwMap = opMode.hardwareMap;
+        HardwareMap hwMap;
+
+        if(linearOpMode != null) {
+            hwMap = linearOpMode.hardwareMap;
+            linearOpMode.telemetry.setMsTransmissionInterval(11);
+            usingLinearOpMode = true;
+        }
+        else {
+            hwMap = opMode.hardwareMap;
+            opMode.telemetry.setMsTransmissionInterval(11);
+            usingLinearOpMode = false;
+        }
 
         // IMU
         imu = hwMap.get(IMU.class,"imu");
@@ -143,27 +180,17 @@ public class Config {
         agitator.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         agitator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // Robot Facing Left Launcher Motor
-        leftLauncher = hwMap.get(DcMotorEx.class, "leftLauncher");
-        leftLauncher.setDirection(DcMotorSimple.Direction.FORWARD);
-        leftLauncher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        leftLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        // Robot Facing Right Launcher Motor
-        rightLauncher = hwMap.get(DcMotorEx.class, "rightLauncher");
-        rightLauncher.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightLauncher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightLauncher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        // Kicker Motor "spin-ny thing"
-        kickerMotor = hwMap.get(DcMotorEx.class, "kickerMotor");
-        kickerMotor.setDirection(DcMotorSimple.Direction.FORWARD);
-        kickerMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        kickerMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        // Modified Robot Launcher Motor
+        launcherMotor = hwMap.get(DcMotorEx.class, "launcher");
+        launcherMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        launcherMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        launcherMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
         // Kicker Servo - Transfers artifacts from agitator to launcher
-        kickerServo = hwMap.get(Servo.class, "kickerServo");
-        kickerServo.setPosition(storeKickerPosition);
+        leftKickerServo = hwMap.get(Servo.class, "lKickerServo");
+        leftKickerServo.setPosition(storeLeftKickerPosition);
+        rightKickerServo = hwMap.get(Servo.class, "rKickerServo");
+        rightKickerServo.setPosition(storeRightKickerPosition);
         intakeServo = hwMap.get(Servo.class, "intakeServo");
 
         // Launcher Multithreading
@@ -176,13 +203,16 @@ public class Config {
         // Starts Threads
         checkAndRestartThreads();
 
+        // Aim Assist
+        aimAssist = new AimAssist(this);
+
         // Tilt Servos - Used to angle projectile
         //leftTilt = hwMap.get(Servo.class, "leftTilt");
         //rightTilt = hwMap.get(Servo.class, "rightTilt");
 
         // Limelight3A Camera
         limelight = hwMap.get(Limelight3A.class, "limelight");
-        opMode.telemetry.setMsTransmissionInterval(11);
+
 
 
         // Build drivetrain for TweetyBird Use
@@ -220,7 +250,7 @@ public class Config {
         tweetyBird = new TweetyBird.Builder()
                 .setDistanceBuffer(1) // Inch(es)
                 .setDriver(mecanum)
-                .setLinearOpMode(opMode)
+                .setLinearOpMode(linearOpMode)
                 .setMaximumSpeed(0.5)
                 .setMinimumSpeed(0.2)
                 .setOdometer(odometer)
@@ -230,80 +260,144 @@ public class Config {
         odometer.resetTo(0,0,0);
     }
 
+    public boolean opModeisActive() {
+        if(usingLinearOpMode) {
+            return linearOpMode.opModeIsActive();
+        }
+        else {
+            return opModeIsActive;
+        }
+    }
+
     /// Set team for launching system etc.
-    public void setTeam(Team team) {
-        log("Team set to " + team);
-        this.team = team;
+    public void setAlliance(Alliance alliance) {
+        log("Team set to " + alliance);
+        this.alliance = alliance;
     }
 
-    /// Uses Limelight to detect Obelisk Motif pattern and updates Motif.motif.
-    public void scanObelisk() {
-        int aprilTag = 0;
-        Motif tempMotif;
-
-        if (!limelight.isRunning()) {
-            log("Limelight: Starting");
-            limelight.start();
-        }
-        if (limelight.getStatus().getPipelineIndex() != limelightObeliskPipeline) {
-            log("Limelight: Pipeline changed to OBELISK");
-            limelight.pipelineSwitch(limelightObeliskPipeline);
-        }
-        LLResult result = limelight.getLatestResult();
-
-        if (result != null && result.isValid()) {
-            // Access fiducial results
-            List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
-            aprilTag = fiducialResults.get(0).getFiducialId();
-        }
-
-        switch (aprilTag) {
-            case (21):
-                tempMotif = Motif.GPP;
-                break;
-            case (22):
-                tempMotif = Motif.PGP;
-                break;
-            case (23):
-                tempMotif = Motif.PPG;
-                break;
-            default:
-                tempMotif = Motif.NULL;
-                break;
-        }
-        if (tempMotif != Motif.NULL) {
-            log("Motif changed to: " + motif);
-            motif = tempMotif;
-        }
-
+    public void increaseLauncherVelocity() {
+        idealLauncherVelocity = Range.clip(idealLauncherVelocity + 100,0,2500);
     }
 
-    /// @return The last recognised motif.
-    public Motif getMotif() {return motif;}
-
-
-    public void increaseLauncherPower() {
-        idealLauncherPower = Range.clip(idealLauncherPower + .1,0.1,1);
+    public void decreaseLauncherVelocity() {
+        idealLauncherVelocity = Range.clip(idealLauncherVelocity - 100,0,2500);
     }
 
-    public void decreaseLauncherPower() {
-        idealLauncherPower = Range.clip(idealLauncherPower - .1,0.1,1);
+    public void switchAlliance() {
+        switch(alliance) {
+            case RED: alliance = Alliance.BLUE; break;
+            case BLUE: alliance = Alliance.RED; break;
+        }
+        saveAllianceToFile(alliance);
     }
 
-    protected void log(String message) {
-        // Getting current time
-        Date now = new Date();
-        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/YYYY hh:mm:ss.SSS");
-        String date = sdf.format(now);
 
-        // Processing string
-        String outputString = "["+date+" Config]: "+message;
+    public void log(String message) {
+        // Log to Android Logcat (viewable in Android Studio)
+        Log.i("FTC_CONFIG", message);
 
-        // Logfile
+        /*
+        // Also log to telemetry if opMode is available
+        if (opMode != null && opMode.telemetry != null) {
+            opMode.telemetry.log().add(message);
+        }
+
+         */
+
+        // Optional: Log to file
+        logToFile(message);
+    }
+
+    private void logToFile(String message) {
         try {
-            logWriter.write(outputString);
-            logWriter.newLine();
-        } catch (IOException ignored) {}
+            File logFile = new File(AppUtil.FIRST_FOLDER, "robot_log.txt");
+
+            // Create timestamp
+            SimpleDateFormat sdf = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss.SSS", Locale.US);
+            String timestamp = sdf.format(new Date());
+
+            // Format log message
+            String logEntry = "[" + timestamp + " Config]: " + message + "\n";
+
+            // Append to file
+            BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, true));
+            writer.write(logEntry);
+            writer.close();
+
+        } catch (IOException e) {
+            // If file logging fails, just log to Logcat
+            Log.e("FTC_CONFIG", "Failed to write to log file: " + e.getMessage());
+        }
+    }
+
+    public Alliance readAllianceFromFile() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "alliance.txt");
+
+            if (!file.exists()) {
+                log("Alliance file not found, defaulting to RED");
+                return Alliance.RED;
+            }
+
+            String fileContents = ReadWriteFile.readFile(file).trim().toUpperCase();
+
+            if (fileContents.equals("BLUE")) {
+                log("Alliance read from file: BLUE");
+                return Alliance.BLUE;
+            }
+
+            log("Alliance read from file: RED");
+            return Alliance.RED;
+
+        } catch (Exception e) {
+            log("Failed to read alliance: " + e.getMessage());
+            return Alliance.RED;
+        }
+    }
+
+    public void saveAllianceToFile(Alliance alliance) {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "alliance.txt");
+            ReadWriteFile.writeFile(file, alliance.toString());
+            log("Alliance saved: " + alliance);
+        } catch (Exception e) {
+            log("Failed to save alliance: " + e.getMessage());
+        }
+    }
+
+    public DriverAmount readDriverAmountFromFile() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
+
+            if (!file.exists()) {
+                log("DriverAmount file not found, defaulting to TWO_DRIVERS");
+                return DriverAmount.TWO_DRIVERS;
+            }
+
+            String fileContents = ReadWriteFile.readFile(file).trim().toUpperCase();
+
+            if (fileContents.equals("TWO_DRIVERS")) {
+                log("DriverAmount read from file: TWO_DRIVERS");
+                return DriverAmount.TWO_DRIVERS;
+            }
+
+            log("DriverAmount read from file: ONE_DRIVER");
+            return DriverAmount.ONE_DRIVER;
+
+        } catch (Exception e) {
+            log("Failed to read driver amount: " + e.getMessage());
+            return DriverAmount.TWO_DRIVERS;
+        }
+    }
+
+    public void saveDriverAmountToFile(DriverAmount driverAmount) {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
+            ReadWriteFile.writeFile(file, driverAmount.toString());
+            log("DriverAmount saved: " + driverAmount);
+        } catch (Exception e) {
+            log("Failed to save driver amount: " + e.getMessage());
+        }
     }
 
     /**
@@ -331,6 +425,32 @@ public class Config {
         }
     }
 
+    public void setWheelPower(double flPower, double frPower, double blPower, double brPower) {
+
+        fl.setPower(flPower);
+        fr.setPower(frPower);
+        bl.setPower(blPower);
+        br.setPower(brPower);
+    }
+
+    public void runIntakeAssembly() {
+        intakeServo.setPosition(intakeServoOnPower);
+        agitator.setPower(agitatorActivePower);
+    }
+    public void stopIntakeAssembly() {
+        intakeServo.setPosition(intakeServerOffPower);
+        agitator.setPower(0);
+    }
+
+    public void activateKicker() {
+        leftKickerServo.setPosition(activeLeftKickerPosition);
+        rightKickerServo.setPosition(activeRightKickerPosition);
+    }
+    public void storeKicker() {
+        leftKickerServo.setPosition(storeLeftKickerPosition);
+        rightKickerServo.setPosition(storeRightKickerPosition);
+    }
+
 }
 
 /**
@@ -343,6 +463,7 @@ class LauncherThread extends Thread {
 
     private int artifactsToLaunch = 0;
     private volatile boolean isBusy = false;
+    private volatile boolean holdPower = false;
 
     private volatile boolean running = true; // When false, thread terminates
 
@@ -351,6 +472,7 @@ class LauncherThread extends Thread {
         while (running) {
             synchronized (this) {
                 try {
+                    log("Entering loop wait.");
                     wait(); // Sleep until notified (Save resources)
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -361,46 +483,64 @@ class LauncherThread extends Thread {
             if (!running) break; // check before doing work
 
             isBusy = true;
+            log("Set isBusy true in run.");
 
-            doLaunch(artifactsToLaunch);
+            doLaunch(artifactsToLaunch, holdPower);
+
 
             isBusy = false;
+            log("Reached end of run loop.");
 
         }
     }
 
-    public void waitWhileBusy() throws InterruptedException {
-        while(isBusy) sleep(50);
+    public void waitWhileBusy() {
+        while(isBusy && robot.opModeIsActive);
     }
 
-    private void setLauncherPower(double power) {
-        robot.leftLauncher.setPower(power);
-        robot.rightLauncher.setPower(power);
+    public boolean isBusy() {
+        return isBusy;
     }
 
-    private void doLaunch(int artifactsToLaunch) {
+    private void setLauncherVelocity(double velocity) {
+        robot.launcherMotor.setVelocity(velocity);
+    }
+
+    private void doLaunch(int artifactsToLaunch, boolean keepPower) {
         try {
             double agitatorStartPower = robot.agitator.getPower();
 
             robot.agitator.setPower(robot.agitatorActivePower);
 
-            setLauncherPower(robot.idealLauncherPower);
-            robot.kickerMotor.setPower(robot.kickerOnPower);
-            sleep(robot.motorRampUpTime); // Ramp up motors
-            robot.kickerServo.setPosition(robot.activeKickerPosition);
-            sleep(700);
+            //robot.aimAssist.runAngleCorrection(5);
+            //robot.aimAssist.runPowerCalculation();
+
+            setLauncherVelocity(robot.idealLauncherVelocity);
+            sleep(robot.motorRampUpTime); // Ramp up motor
+            robot.activateKicker();
+            sleep(900);
             // Artifact One fully exited
             for (int i = 1; i <artifactsToLaunch; i++) {
-                robot.kickerServo.setPosition(robot.storeKickerPosition);
-                sleep(400); // Waiting for artifact to clear kicker
-                robot.kickerServo.setPosition(robot.activeKickerPosition);
-                sleep(700); // Artifact X fully exited
+                robot.agitator.setPower(-robot.agitatorActivePower/2);
+                robot.storeKicker();
+                sleep(300); // wait for lowering of kicker
+                robot.agitator.setPower(robot.agitatorActivePower);
+                sleep(600); // Waiting for artifact to enter kicker
+                robot.activateKicker();
+                sleep(900); // Artifact X fully exited
             }
 
             // Go to IDLE mode
-            robot.kickerServo.setPosition(robot.storeKickerPosition);
-            robot.kickerMotor.setPower(robot.kickerIdlePower);
-            setLauncherPower(0);
+            robot.agitator.setPower(-robot.agitatorActivePower);
+            robot.storeKicker();
+            sleep(200);
+            robot.agitator.setPower(agitatorStartPower);
+            if(!keepPower) {
+                setLauncherVelocity(0);
+                isBusy = false;
+            }
+            else {isBusy = false;}
+
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -416,6 +556,16 @@ class LauncherThread extends Thread {
         this.artifactsToLaunch = artifactsToLaunch;
         notify();
     }
+    public synchronized void launch(int artifactsToLaunch, boolean holdPower) {
+        this.holdPower = holdPower;
+        this.artifactsToLaunch = artifactsToLaunch;
+        notify();
+    }
+
+    private void log(String message) {
+        robot.log("[LauncherThread] - " + message);
+    }
+
 }
 
 /**
@@ -429,12 +579,14 @@ class LimelightThread extends Thread {
 
     boolean scanGoalAngle = false;
     boolean scanObelisk = false;
+    boolean isBusy = false;
 
     @Override
     public void run() {
         while (running) {
             synchronized (this) {
                 try {
+                    isBusy = false;
                     wait(); // Sleep until notified (Save resources)
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -445,7 +597,14 @@ class LimelightThread extends Thread {
             if (!running) break; // check before doing work
 
             if(scanGoalAngle){
+                isBusy = true;
                 doScanGoalAngle();
+                scanGoalAngle = false;
+            }
+            else if(scanObelisk){
+                isBusy = true;
+                doScanObelisk();
+                scanObelisk = false;
             }
 
         }
@@ -453,14 +612,18 @@ class LimelightThread extends Thread {
 
     /// Limelight updates goalTx and goalTy
     public synchronized void scanGoalAngle(){
-        scanGoalAngle = true;
-        notify();
+        if(!isBusy) {
+            scanGoalAngle = true;
+            notify();
+        }
     }
 
     /// Limelight updates motif
     public synchronized void scanObelisk(){
-        scanObelisk = true;
-        notify();
+        if(!isBusy) {
+            scanObelisk = true;
+            notify();
+        }
     }
 
     /// Uses Limelight to detect Goal angle and update goalTx and goalTy.
@@ -474,7 +637,7 @@ class LimelightThread extends Thread {
         }
 
         // Set desired pipeline
-        switch (robot.team) {
+        switch (robot.alliance) {
             case BLUE:
                 selectedPipeline = robot.limelightBluePipeline;
                 break;
@@ -500,6 +663,7 @@ class LimelightThread extends Thread {
             robot.goalAnglesAreValid = true;
             robot.goalTx = result.getTx();
             robot.goalTy = result.getTy();
+            robot.goalAvgDist = result.getBotposeAvgDist();
         }
         else {
             robot.goalAnglesAreValid = false;
@@ -551,4 +715,127 @@ class LimelightThread extends Thread {
         running = false;
         notify();
     }
+
+    private void log(String message) {
+        robot.log("[LLThread] - " + message);
+    }
 }
+
+class AimAssist {
+
+    private ElapsedTime runtime = new ElapsedTime(ElapsedTime.Resolution.SECONDS);
+    private boolean active;
+    private boolean cancel;
+    private final double blueDesiredTx = -5;
+    private final double redDesiredTx = -5;
+    private final double tolerance = 3; // Get within x degrees of target
+    private final double minWheelPower = 0.1; // Smallest amount of power that still moves wheels
+    private double correctionPower = 0.3;
+    private double scaleFactor = 0.05;
+
+    Config robot;
+
+    public AimAssist(Config robot) {
+        this.robot = robot;
+        log("Ready.");
+    }
+
+    /**
+     * Corrects robot heading to align with alliance goal.
+     * Unless opMode stops, timeOut, or cancelCorrection.
+     *
+     * @apiNote For cancelCorrection to work, this must be run in a different thread,
+     * as runCorrection utilizes a while loop to complete its task.
+     *
+     * @param timeOut Max time AimAssist can work in seconds.
+     */
+    public void runAngleCorrection(double timeOut) {
+
+        ElapsedTime runtime = new ElapsedTime();
+        runtime.reset();
+
+        robot.limelightThread.scanGoalAngle();
+
+        if(!robot.goalAnglesAreValid) {
+            log("Goal Angles Invalid, Cancelling.");
+            return;
+        }
+
+        double desiredTx;
+
+        if(robot.alliance == Config.Alliance.RED) {
+            desiredTx = redDesiredTx;
+            log("Correcting for Red.");
+        }
+        else {
+            desiredTx = blueDesiredTx;
+            log("Correcting for Blue.");
+        }
+
+        log("Entering loop.");
+        while(robot.opModeisActive() && timeOut > runtime.time()) {
+            robot.limelightThread.scanGoalAngle();
+
+            double distance = Math.abs(robot.goalTx - desiredTx);
+            correctionPower = Range.clip(distance*scaleFactor, 0.1, 0.2);
+
+
+            if(distance < 0.5) {
+                log("Within tolerance, Closing Loop...");
+                break;
+            }
+            else if(robot.goalTx > desiredTx) {
+                // Rotate right
+                robot.setWheelPower(correctionPower,-correctionPower,correctionPower,-correctionPower);
+            }
+            else if(robot.goalTx < desiredTx) {
+                // Rotate left
+                robot.setWheelPower(-correctionPower,correctionPower,-correctionPower,correctionPower);
+            }
+        }
+        robot.setWheelPower(0,0,0,0);
+        log("Loop Closed.");
+
+    }
+
+    /**
+     * Sets robot ideal launch velocity for current position
+     * using Limelight camera.
+     */
+    public void runPowerCalculation() {
+
+        double x = robot.goalTy;
+        robot.idealLauncherVelocity = -2.46914*Math.pow(x,3)+74.07407*Math.pow(x,2)-751.85185*x+3880.24691;
+        log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
+
+
+
+        /*
+        double x = robot.goalAvgDist;
+        robot.idealLauncherVelocity = (989.29847*x)+255.92292;
+        log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
+
+         */
+
+    }
+
+
+    /**
+     * Cancels runCorrection.
+     */
+    public void cancelCorrection() {
+        if(active) {
+            cancel = true;
+        }
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    private void log(String message) {
+        robot.log("[AimAssist] - " + message);
+    }
+
+}
+
