@@ -51,7 +51,7 @@ public class SoloTele extends LinearOpMode {
             boolean changeAlliance = gamepad1.options;
 
             if(activateAimAssist && !robot.aimAssist.isActive()) {
-                robot.limelightThread.scanGoalAngle();
+                //robot.limelightThread.scanGoalAngle();
                 robot.aimAssist.runAngleCorrection(3);
             }
 
@@ -123,7 +123,7 @@ public class SoloTele extends LinearOpMode {
             if(!robot.launcherThread.isBusy()) {
                 robot.agitator.setPower(agitatorPower);
             }
-            robot.intakeServo.setPosition(intakeServoTarget);
+            robot.intakeMotor.setVelocity(robot.intakeMotorOnVelocity);
 
             // FCD reset
             if (resetFCD) {
@@ -151,12 +151,12 @@ public class SoloTele extends LinearOpMode {
             robot.br.setPower(rightBackPower * mainThrottle);
 
 
-            robot.limelightThread.scanGoalAngle();
+            //robot.limelightThread.scanGoalAngle();
             //robot.aimAssist.runPowerCalculation();
 
             telemetry.addData("Launcher Velocity", robot.idealLauncherVelocity);
-            telemetry.addData("\nTx", robot.goalTx);
-            telemetry.addData("AvgDist", robot.goalAvgDist);
+            //telemetry.addData("\nTx", robot.goalTx);
+            //telemetry.addData("AvgDist", robot.goalAvgDist);
 
             // One Driver Telemetry
             telemetry.addLine("" +

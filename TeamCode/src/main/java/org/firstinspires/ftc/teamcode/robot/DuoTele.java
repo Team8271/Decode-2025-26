@@ -18,7 +18,8 @@ public class DuoTele extends LinearOpMode {
         boolean launcherVelocityDebounce = false;
         boolean changeAllianceDebounce = false;
         double agitatorPower = 0;
-        double intakeServoTarget = 0.5;
+        boolean intakeAssemblyIsActive = false;
+        boolean intakeAssemblyIsReversed = false;
 
         telemetry.addLine("Initialized");
         telemetry.update();
@@ -40,11 +41,8 @@ public class DuoTele extends LinearOpMode {
             // Driver 2 Controls
             boolean launchOneArtifact = gamepad2.a;
             boolean launchThreeArtifacts = gamepad2.y;
-            boolean activateAgitatorAssembly = gamepad2.b;
-            boolean reverseAgitator = gamepad2.x;
-
-            boolean increaseLauncherVelocity = gamepad2.right_bumper;
-            boolean decreaseLauncherVelocity = gamepad2.left_bumper;
+            boolean intakeAssemblyToggle = gamepad2.b;
+            boolean reverseIntakeAssemblyToggle = gamepad2.x;
 
             boolean changeAlliance = gamepad2.options;
 
@@ -99,32 +97,28 @@ public class DuoTele extends LinearOpMode {
                 launcherDebounce = false;
             }
 
-            if (activateAgitatorAssembly && !debounce) {
-                if (agitatorPower == 1) {
-                    agitatorPower = 0;
-                    intakeServoTarget = 0.5;
-                }
-                else if(agitatorPower == -1) {
-                    agitatorPower = 1;
+            if (intakeAssemblyToggle && !debounce) {
+                if(!intakeAssemblyIsActive || intakeAssemblyIsReversed) {
+                    robot.runIntakeAssembly();
+                    intakeAssemblyIsActive = true;
                 }
                 else {
-                    agitatorPower = 1;
-                    intakeServoTarget = 1;
+                    robot.stopIntakeAssembly();
+                    intakeAssemblyIsActive = false;
                 }
+
+                intakeAssemblyIsReversed = false;
                 debounce = true;
             }
-            if (reverseAgitator && !debounce) {
-                agitatorPower = -1;
+            if (reverseIntakeAssemblyToggle && !debounce) {
+                robot.reverseIntakeAssembly();
+                intakeAssemblyIsReversed = true;
+
             }
 
-            if (!activateAgitatorAssembly && !reverseAgitator && debounce) {
+            if (!intakeAssemblyToggle && !reverseIntakeAssemblyToggle && debounce) {
                 debounce = false;
             }
-
-            if(!robot.launcherThread.isBusy()) {
-                robot.agitator.setPower(agitatorPower);
-            }
-            robot.intakeServo.setPosition(intakeServoTarget);
 
             // FCD reset
             if (resetFCD) {
@@ -152,23 +146,28 @@ public class DuoTele extends LinearOpMode {
             robot.br.setPower(rightBackPower * mainThrottle);
 
 
-            robot.limelightThread.scanGoalAngle();
+            //robot.limelightThread.scanGoalAngle();
             //robot.aimAssist.runPowerCalculation();
 
             telemetry.addData("Launcher Velocity", robot.idealLauncherVelocity);
-            telemetry.addData("\nTx", robot.goalTx);
-            telemetry.addData("AvgDist", robot.goalAvgDist);
+            telemetry.addData("Intake Velocity", robot.intakeMotor.getVelocity());
+            //telemetry.addData("\nTx", robot.goalTx);
+            //telemetry.addData("AvgDist", robot.goalAvgDist);
 
             // One Driver Telemetry
-            telemetry.addLine("" +
-                    "  Axial Control - Left Stick Y\n" +
-                    "  Lateral Control - Left Stick X\n" +
-                    "  Yaw Control - Right Stick X\n" +
-                    "  Throttle - Right Trigger\n" +
-                    "  FCD Reset - dPad Up\n" +
-                    "  Launch One Artifact - A\n" +
-                    "  Launch Three Artifacts - Y\n" +
-                    "  Agitator Assembly - B");
+            telemetry.addLine(""+
+                    "  Gamepad1:\n" +
+                    "    Axial Control - Left Stick Y\n" +
+                    "    Lateral Control - Left Stick X\n" +
+                    "    Yaw Control - Right Stick X\n" +
+                    "    Throttle - Right Trigger\n" +
+                    "    FCD Reset - dPad Up\n" +
+                    "  Gamepad2:\n" +
+                    "    Launch One Artifact - A\n" +
+                    "    Launch Three Artifacts - Y\n" +
+                    "    Agitator Assembly - B\n" +
+                    "    Increase Launcher Power - dPad Up\n" +
+                    "    Decrease Launcher Power - dPad Down");
 
             telemetry.update();
         }
