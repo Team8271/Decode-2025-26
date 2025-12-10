@@ -170,7 +170,7 @@ public class Config {
 
         // Motor used in the Active Agitator module
         agitator = hwMap.get(DcMotorEx.class, "agitator");
-        agitator.setDirection(DcMotorSimple.Direction.REVERSE);
+        agitator.setDirection(DcMotor.Direction.REVERSE);
         agitator.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         agitator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
@@ -529,7 +529,6 @@ class LauncherThread extends Thread {
             // Artifact One fully exited
             for (int i = 1; i <artifactsToLaunch; i++) {
                 robot.agitator.setPower(-robot.agitatorActivePower*.8);
-                robot.intakeMotor.setVelocity(-robot.intakeMotorOnVelocity*.5);
                 robot.storeKicker();
                 sleep(450); // wait for lowering of kicker
                 robot.agitator.setPower(robot.agitatorActivePower);
