@@ -45,6 +45,9 @@ public class Config {
             activeLeftKickerPosition = 0, activeRightKickerPosition = 1 - activeLeftKickerPosition,
             intakeLimServerActivePosition = 1, intakeLimServoInactivePosition = 0.5;
 
+    public final double indicatorLightOn = 0.722, indicatorLightOff = 0,
+                        indicatorLightReverse = 0.555;
+
     public final int motorRampUpTime = 3000;
 
     public boolean devBool = false;
@@ -53,6 +56,9 @@ public class Config {
     /// @deprecated in favor of launcher velocity
     public double idealLauncherPower = 1;
     public double idealLauncherVelocity = 1900; // !! WARNING, VALUE USED IN AUTO... 0-2500 effective range
+
+    private double  desiredLeftKickerPosition = storeLeftKickerPosition,
+                    desiredIntakeLimiterPosition = intakeLimServerActivePosition;
 
     // Reference to opMode class
     public final LinearOpMode linearOpMode;
@@ -68,6 +74,7 @@ public class Config {
 
     // Define Servos
     private Servo leftKickerServo, rightKickerServo, intakeLimServo;
+    public Servo indicatorLight;
 
     // Other Hardware
     public Limelight3A limelightCamera;
@@ -142,47 +149,49 @@ public class Config {
 
         // Front Left Drive
         fl = hwMap.get(DcMotorEx.class, "fl");
-        fl.setDirection(DcMotor.Direction.REVERSE);
-        fl.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        fl.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        fl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        fl.setDirection(DcMotorEx.Direction.REVERSE);
+        fl.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        fl.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        fl.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Front Right Drive
         fr = hwMap.get(DcMotorEx.class, "fr");
-        fr.setDirection(DcMotor.Direction.FORWARD);
-        fr.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        fr.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        fr.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        fr.setDirection(DcMotorEx.Direction.FORWARD);
+        fr.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        fr.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        fr.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Back Left Drive
         bl = hwMap.get(DcMotorEx.class, "bl");
-        bl.setDirection(DcMotor.Direction.REVERSE);
-        bl.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        bl.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        bl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        bl.setDirection(DcMotorEx.Direction.REVERSE);
+        bl.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        bl.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        bl.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Back Right Drive
         br = hwMap.get(DcMotorEx.class, "br");
-        br.setDirection(DcMotor.Direction.FORWARD);
-        br.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        br.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        br.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        br.setDirection(DcMotorEx.Direction.FORWARD);
+        br.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        br.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        br.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Motor used in the Active Agitator module
         agitator = hwMap.get(DcMotorEx.class, "agitator");
-        agitator.setDirection(DcMotor.Direction.REVERSE);
+        agitator.setDirection(DcMotorSimple.Direction.REVERSE);
+        agitator.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         agitator.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        agitator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        agitator.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Modified Robot Launcher Motor
         launcherMotor = hwMap.get(DcMotorEx.class, "launcher");
-        launcherMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-        launcherMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        launcherMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        launcherMotor.setDirection(DcMotorEx.Direction.REVERSE);
+        launcherMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        launcherMotor.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        launcherMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
 
         // Called 'org' in spirit
         intakeMotor = hwMap.get(DcMotorEx.class, "intake");
-        intakeMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        intakeMotor.setDirection(DcMotorEx.Direction.FORWARD);
 
         // Kicker Servo - Transfers artifacts from agitator to launcher
         leftKickerServo = hwMap.get(Servo.class, "lKickerServo");
@@ -192,6 +201,10 @@ public class Config {
         // IntakeLimiterServo
         intakeLimServo = hwMap.get(Servo.class, "intakeLimServo");
         intakeLimServo.setPosition(intakeLimServerActivePosition);
+
+        // Light
+        indicatorLight = hwMap.get(Servo.class, "bigStupidLight");
+        indicatorLight.setPosition(indicatorLightOn);
 
         // Launcher Multithreading
         launcherThread = new LauncherThread();
@@ -433,11 +446,19 @@ public class Config {
     }
 
     public void activateIntakeLimiter() {
+        desiredIntakeLimiterPosition = intakeLimServerActivePosition;
         intakeLimServo.setPosition(intakeLimServerActivePosition);
         devBool = true;
     }
 
+    public void waitForLimiter() throws InterruptedException {
+        while(intakeLimServo.getPosition() != desiredIntakeLimiterPosition) {
+            Thread.sleep(50);
+        }
+    }
+
     public void deactivateIntakeLimiter() {
+        desiredIntakeLimiterPosition = intakeLimServoInactivePosition;
         intakeLimServo.setPosition(intakeLimServoInactivePosition);
         devBool = false;
     }
@@ -448,13 +469,26 @@ public class Config {
     }
 
     public void activateKicker() {
-        deactivateIntakeLimiter();
+        desiredLeftKickerPosition = activeLeftKickerPosition;
         leftKickerServo.setPosition(activeLeftKickerPosition);
         rightKickerServo.setPosition(activeRightKickerPosition);
     }
 
+    /**
+     * Waits for kicker to reach desired position.
+     *
+     * <h1>MAY NOT WORK</h1>
+     *
+     * @throws InterruptedException
+     */
+    public void waitForKicker() throws InterruptedException {
+        while(leftKickerServo.getPosition() != desiredLeftKickerPosition) {
+            Thread.sleep(50);
+        }
+    }
+
     public void storeKicker() {
-        activateIntakeLimiter();
+        desiredLeftKickerPosition = storeLeftKickerPosition;
         leftKickerServo.setPosition(storeLeftKickerPosition);
         rightKickerServo.setPosition(storeRightKickerPosition);
     }
@@ -468,9 +502,8 @@ class LauncherThread extends Thread {
     Config robot;
     public void setConfig(Config robot) {this.robot = robot;}
 
-    private int artifactsToLaunch = 0;
+    private volatile boolean launchThree = false;
     private volatile boolean isBusy = false;
-    private volatile boolean holdPower = false;
 
     private volatile boolean running = true; // When false, thread terminates
 
@@ -492,7 +525,22 @@ class LauncherThread extends Thread {
             isBusy = true;
             log("Set isBusy true in run.");
 
-            doLaunch(artifactsToLaunch, holdPower);
+            if(launchThree) {
+                try {
+                    doLaunchThree();
+                } catch (Exception e) {
+                    log("ERROR while LaunchThree: " + e);
+                    interrupt();
+                }
+            }
+            else {
+                try {
+                    doLaunchOne();
+                } catch (Exception e) {
+                    log("ERROR while LaunchOne: " + e);
+                    interrupt();
+                }
+            }
 
 
             isBusy = false;
@@ -513,11 +561,18 @@ class LauncherThread extends Thread {
         robot.launcherMotor.setVelocity(velocity);
     }
 
-    private void doLaunch(int artifactsToLaunch, boolean keepPower) {
+    private void waitForLauncherVelocity(double velocity) throws InterruptedException {
+        while (robot.launcherMotor.getVelocity() != velocity) {
+            sleep(50);
+        }
+    }
+
+    private void doLaunchOne() {
         try {
             double agitatorStartPower = robot.agitator.getPower();
 
             robot.agitator.setPower(robot.agitatorActivePower);
+            robot.intakeMotor.setVelocity(200);
 
             //robot.aimAssist.runAngleCorrection(5);
             //robot.aimAssist.runPowerCalculation();
@@ -525,14 +580,17 @@ class LauncherThread extends Thread {
             setLauncherVelocity(robot.idealLauncherVelocity);
             sleep(robot.motorRampUpTime); // Ramp up motor
             robot.activateKicker();
+            robot.deactivateIntakeLimiter();
             sleep(900);
             // Artifact One fully exited
-            for (int i = 1; i <artifactsToLaunch; i++) {
+            for (int i = 1; i <0; i++) {
                 robot.agitator.setPower(-robot.agitatorActivePower*.8);
+                robot.intakeMotor.setPower(-.1);
                 robot.storeKicker();
-                sleep(450); // wait for lowering of kicker
+                sleep(300); // wait for lowering of kicker
                 robot.agitator.setPower(robot.agitatorActivePower);
-                sleep(600); // Waiting for artifact to enter kicker
+                robot.intakeMotor.setPower(0.3);
+                sleep(650); // Waiting for artifact to enter kicker
                 robot.activateKicker();
                 sleep(900); // Artifact X fully exited
             }
@@ -540,13 +598,11 @@ class LauncherThread extends Thread {
             // Go to IDLE mode
             robot.agitator.setPower(-robot.agitatorActivePower);
             robot.storeKicker();
+            robot.activateIntakeLimiter();
             sleep(200);
-            robot.agitator.setPower(agitatorStartPower);
-            if(!keepPower) {
-                setLauncherVelocity(0);
-                isBusy = false;
-            }
-            else {isBusy = false;}
+            //robot.agitator.setPower(agitatorStartPower);
+            robot.agitator.setPower(0);
+            robot.intakeMotor.setVelocity(0);
 
         }
         catch (InterruptedException e) {
@@ -554,18 +610,62 @@ class LauncherThread extends Thread {
         }
     }
 
+    private void doLaunchThree() throws InterruptedException {
+
+        robot.agitator.setPower(robot.agitatorActivePower);
+        robot.intakeMotor.setPower(0.2);
+
+        // !! Unstable: If idealVelocity changes -> may never reach
+        // Launch motor ramp up.
+        setLauncherVelocity(robot.idealLauncherVelocity);
+        waitForLauncherVelocity(robot.idealLauncherVelocity);
+
+        // First launch
+        robot.activateKicker();
+        robot.deactivateIntakeLimiter();
+
+        robot.waitForKicker();
+
+        log("(1/3) - Artifact Launched");
+
+        // TODO: Reverse agitator
+        // TODO: Slow reverse intake
+
+        // Store kicker
+        robot.storeKicker();
+        robot.waitForKicker();
+
+        // TODO: Set agitator forward - runToPos?
+        // TODO: Slow forward intake
+        // TODO: Wait for artifact to enter chamber - runToPos?
+
+        // Activate kicker
+        robot.activateKicker();
+        robot.waitForKicker();
+
+        // TODO: motor reRamp - not in repeat
+        // TODO: repeat
+
+        // Activate Intake Limiter
+        robot.activateIntakeLimiter();
+        robot.waitForLimiter();
+
+        // TODO: turn off/on agitator && intake (option?)
+
+        log("Finished Launch Sequence Type:3");
+    }
+
     public synchronized void terminate() {
         running = false;
         notify();
     }
 
-    public synchronized void launch(int artifactsToLaunch) {
-        this.artifactsToLaunch = artifactsToLaunch;
+    public synchronized void launchOne() {
+        launchThree = false;
         notify();
     }
-    public synchronized void launch(int artifactsToLaunch, boolean holdPower) {
-        this.holdPower = holdPower;
-        this.artifactsToLaunch = artifactsToLaunch;
+    public synchronized void launchThree() {
+        launchThree = true;
         notify();
     }
 

@@ -169,13 +169,13 @@ public class NewNewTele extends OpMode {
         }
 
         if (launchOneArtifact && !launcherDebounce) {
-            robot.launcherThread.launch(1);
+            //robot.launcherThread.launch(1);
             gamepad1.rumble(0.8,0.8,125);
             gamepad2.rumble(0.8,0.8,125);
             launcherDebounce = true;
         }
         if (launchThreeArtifacts && !launcherDebounce) {
-            robot.launcherThread.launch(3);
+            //robot.launcherThread.launch(3);
             gamepad1.rumble(0.8,0.8,125);
             gamepad2.rumble(0.8,0.8,125);
             launcherDebounce = true;

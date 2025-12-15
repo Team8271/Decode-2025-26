@@ -87,11 +87,11 @@ public class SoloTele extends LinearOpMode {
 
 
             if (launchOneArtifact && !launcherDebounce) {
-                robot.launcherThread.launch(1);
+                //robot.launcherThread.launch(1);
                 launcherDebounce = true;
             }
             if (launchThreeArtifacts && !launcherDebounce) {
-                robot.launcherThread.launch(3);
+                //robot.launcherThread.launch(3);
                 launcherDebounce = true;
             }
             if (!launchOneArtifact && !launchThreeArtifacts && launcherDebounce) {

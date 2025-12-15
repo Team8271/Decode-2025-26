@@ -11,7 +11,7 @@ public class DuoTele extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        robot = new Config(this,null);
+        robot = new Config(this, null);
         robot.init();
         boolean debounce = false;
         boolean launcherDebounce = false;
@@ -82,13 +82,13 @@ public class DuoTele extends LinearOpMode {
 
 
             if (launchOneArtifact && !launcherDebounce) {
-                robot.launcherThread.launch(1);
+                //robot.launcherThread.launch(1);
                 gamepad1.rumble(0.8,0.8,125);
                 gamepad2.rumble(0.8,0.8,125);
                 launcherDebounce = true;
             }
             if (launchThreeArtifacts && !launcherDebounce) {
-                robot.launcherThread.launch(3);
+                //robot.launcherThread.launch(3);
                 gamepad1.rumble(0.8,0.8,125);
                 gamepad2.rumble(0.8,0.8,125);
                 launcherDebounce = true;
@@ -144,6 +144,16 @@ public class DuoTele extends LinearOpMode {
             robot.fr.setPower(rightFrontPower * mainThrottle);
             robot.bl.setPower(leftBackPower * mainThrottle);
             robot.br.setPower(rightBackPower * mainThrottle);
+
+            if(robot.intakeMotor.getVelocity() < -50) {
+                robot.indicatorLight.setPosition(robot.indicatorLightReverse);
+            }
+            else if(robot.intakeMotor.getVelocity() < 100 && robot.intakeMotor.getPower() != 0) {
+                robot.indicatorLight.setPosition(robot.indicatorLightOn);
+            }
+            else {
+                robot.indicatorLight.setPosition(robot.indicatorLightOff);
+            }
 
 
             //robot.limelightThread.scanGoalAngle();

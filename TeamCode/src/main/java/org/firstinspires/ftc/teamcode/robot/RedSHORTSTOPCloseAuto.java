@@ -183,7 +183,7 @@ public class RedSHORTSTOPCloseAuto extends OpMode {
     @Override
     public void init() {
 
-        robot = new Config(null, this);
+        robot = new Config(null,this);
         robot.init();
         setOpModeIsActive(true);
 
@@ -237,7 +237,7 @@ public class RedSHORTSTOPCloseAuto extends OpMode {
 
     private void launch() {
         //robot.aimAssist.runAngleCorrection(2);
-        robot.launcherThread.launch(3,true);
+        //robot.launcherThread.launch(3,true);
         waitingForLauncher = true;
 
     }

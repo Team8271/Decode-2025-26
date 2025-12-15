@@ -266,7 +266,7 @@ public class RedFarAuto extends OpMode {
 
     private void launch() {
         //robot.aimAssist.runAngleCorrection(2);
-        robot.launcherThread.launch(3,true);
+        //robot.launcherThread.launch(3,true);
         waitingForLauncher = true;
 
     }
