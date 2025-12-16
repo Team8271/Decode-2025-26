@@ -603,7 +603,7 @@ class LauncherThread extends Thread {
         robot.activateKicker();
         robot.deactivateIntakeLimiter();
 
-        robot.waitForKicker();
+        //robot.waitForKicker();
 
         log("(1/3) - Artifact Launched");
 
@@ -612,7 +612,7 @@ class LauncherThread extends Thread {
 
         // Store kicker
         robot.storeKicker();
-        robot.waitForKicker();
+        //robot.waitForKicker();
 
         // TODO: Set agitator forward - runToPos?
         // TODO: Slow forward intake
@@ -620,7 +620,7 @@ class LauncherThread extends Thread {
 
         // Activate kicker
         robot.activateKicker();
-        robot.waitForKicker();
+        //robot.waitForKicker();
 
         // TODO: motor reRamp - not in repeat
         // TODO: repeat
