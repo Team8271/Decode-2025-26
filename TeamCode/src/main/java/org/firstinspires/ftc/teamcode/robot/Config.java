@@ -41,8 +41,7 @@ public class Config {
             agitatorActivePower = 1, intakeMotorOnVelocity = 500, intakeMotorOffVelocity = 0;
 
     private final double
-            storeLeftKickerPosition = 0.45, storeRightKickerPosition = 1 - storeLeftKickerPosition,
-            activeLeftKickerPosition = 0, activeRightKickerPosition = 1 - activeLeftKickerPosition,
+            storeKickerPosition = 0.5, activeKickerPosition = 1,
             intakeLimServerActivePosition = 1, intakeLimServoInactivePosition = 0.5;
 
     public final double indicatorLightOn = 0.722, indicatorLightOff = 0,
@@ -57,8 +56,7 @@ public class Config {
     public double idealLauncherPower = 1;
     public double idealLauncherVelocity = 1900; // !! WARNING, VALUE USED IN AUTO... 0-2500 effective range
 
-    private double  desiredLeftKickerPosition = storeLeftKickerPosition,
-                    desiredIntakeLimiterPosition = intakeLimServerActivePosition;
+    private double desiredIntakeLimiterPosition = intakeLimServerActivePosition;
 
     // Reference to opMode class
     public final LinearOpMode linearOpMode;
@@ -73,7 +71,7 @@ public class Config {
             agitator, launcherMotor, intakeMotor;
 
     // Define Servos
-    private Servo leftKickerServo, rightKickerServo, intakeLimServo;
+    private Servo kickerServo, intakeLimServo;
     public Servo indicatorLight;
 
     // Other Hardware
@@ -194,10 +192,8 @@ public class Config {
         intakeMotor.setDirection(DcMotorEx.Direction.FORWARD);
 
         // Kicker Servo - Transfers artifacts from agitator to launcher
-        leftKickerServo = hwMap.get(Servo.class, "lKickerServo");
-        leftKickerServo.setPosition(storeLeftKickerPosition);
-        rightKickerServo = hwMap.get(Servo.class, "rKickerServo");
-        rightKickerServo.setPosition(storeRightKickerPosition);
+        kickerServo = hwMap.get(Servo.class, "kicker");
+        kickerServo.setPosition(storeKickerPosition);
         // IntakeLimiterServo
         intakeLimServo = hwMap.get(Servo.class, "intakeLimServo");
         intakeLimServo.setPosition(intakeLimServerActivePosition);
@@ -469,28 +465,11 @@ public class Config {
     }
 
     public void activateKicker() {
-        desiredLeftKickerPosition = activeLeftKickerPosition;
-        leftKickerServo.setPosition(activeLeftKickerPosition);
-        rightKickerServo.setPosition(activeRightKickerPosition);
-    }
-
-    /**
-     * Waits for kicker to reach desired position.
-     *
-     * <h1>MAY NOT WORK</h1>
-     *
-     * @throws InterruptedException
-     */
-    public void waitForKicker() throws InterruptedException {
-        while(leftKickerServo.getPosition() != desiredLeftKickerPosition) {
-            Thread.sleep(50);
-        }
+        kickerServo.setPosition(activeKickerPosition);
     }
 
     public void storeKicker() {
-        desiredLeftKickerPosition = storeLeftKickerPosition;
-        leftKickerServo.setPosition(storeLeftKickerPosition);
-        rightKickerServo.setPosition(storeRightKickerPosition);
+        kickerServo.setPosition(storeKickerPosition);
     }
 }
 
