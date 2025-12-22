@@ -41,7 +41,7 @@ public class Config {
             agitatorActivePower = 1, intakeMotorOnVelocity = 500, intakeMotorOffVelocity = 0;
 
     private final double
-            storeLeftKickerPosition = 0.45, storeRightKickerPosition = 1 - storeLeftKickerPosition,
+            storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1 - storeLeftKickerPosition,
             activeLeftKickerPosition = 0, activeRightKickerPosition = 1 - activeLeftKickerPosition,
             intakeLimServerActivePosition = 1, intakeLimServoInactivePosition = 0.5;
 
