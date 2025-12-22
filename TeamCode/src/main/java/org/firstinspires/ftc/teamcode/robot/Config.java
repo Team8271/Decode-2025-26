@@ -474,17 +474,8 @@ public class Config {
         rightKickerServo.setPosition(activeRightKickerPosition);
     }
 
-    /**
-     * Waits for kicker to reach desired position.
-     *
-     * <h1>MAY NOT WORK</h1>
-     *
-     * @throws InterruptedException
-     */
     public void waitForKicker() throws InterruptedException {
-        while(leftKickerServo.getPosition() != desiredLeftKickerPosition) {
-            Thread.sleep(50);
-        }
+        Thread.sleep(200);
     }
 
     public void storeKicker() {
