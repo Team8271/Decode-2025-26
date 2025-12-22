@@ -184,7 +184,7 @@ public class Config {
 
         // Modified Robot Launcher Motor
         launcherMotor = hwMap.get(DcMotorEx.class, "launcher");
-        launcherMotor.setDirection(DcMotorEx.Direction.REVERSE);
+        launcherMotor.setDirection(DcMotorEx.Direction.FORWARD);
         launcherMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         launcherMotor.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
         launcherMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
