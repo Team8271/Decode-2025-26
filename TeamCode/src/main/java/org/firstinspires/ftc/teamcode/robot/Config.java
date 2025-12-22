@@ -518,7 +518,7 @@ class LauncherThread extends Thread {
 
             if(launchThree) {
                 try {
-                    doLaunchThree();
+                    doLaunch(3);
                 } catch (Exception e) {
                     log("ERROR while LaunchThree: " + e);
                     interrupt();
@@ -526,7 +526,7 @@ class LauncherThread extends Thread {
             }
             else {
                 try {
-                    doLaunchOne();
+                    doLaunch(1);
                 } catch (Exception e) {
                     log("ERROR while LaunchOne: " + e);
                     interrupt();
@@ -558,7 +558,7 @@ class LauncherThread extends Thread {
         }
     }
 
-    private void doLaunchOne() {
+    private void doLaunch(int artifactsToLaunch) {
         try {
             double agitatorStartPower = robot.agitator.getPower();
 
@@ -572,28 +572,34 @@ class LauncherThread extends Thread {
             sleep(robot.motorRampUpTime); // Ramp up motor
             robot.activateKicker();
             robot.deactivateIntakeLimiter();
-            sleep(900);
+            sleep(150);
+            robot.activateKicker();
+            robot.waitForKicker();
             // Artifact One fully exited
-            for (int i = 1; i <0; i++) {
-                robot.agitator.setPower(-robot.agitatorActivePower*.8);
+            for (int i = 1; i < artifactsToLaunch; i++) {
+                robot.agitator.setPower(0);
                 robot.intakeMotor.setPower(-.1);
                 robot.storeKicker();
-                sleep(300); // wait for lowering of kicker
+                robot.waitForKicker();
                 robot.agitator.setPower(robot.agitatorActivePower);
                 robot.intakeMotor.setPower(0.3);
                 sleep(650); // Waiting for artifact to enter kicker
+                if(i==3){
+                    sleep(200); // Additional Wait
+                }
                 robot.activateKicker();
-                sleep(900); // Artifact X fully exited
+                robot.waitForKicker();
             }
 
             // Go to IDLE mode
             robot.agitator.setPower(-robot.agitatorActivePower);
             robot.storeKicker();
             robot.activateIntakeLimiter();
-            sleep(200);
+            sleep(1500);
             //robot.agitator.setPower(agitatorStartPower);
             robot.agitator.setPower(0);
             robot.intakeMotor.setVelocity(0);
+            robot.launcherMotor.setPower(0);
 
         }
         catch (InterruptedException e) {
