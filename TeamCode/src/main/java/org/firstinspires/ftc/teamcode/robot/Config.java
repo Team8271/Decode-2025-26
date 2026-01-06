@@ -570,7 +570,6 @@ class LauncherThread extends Thread {
 
             setLauncherVelocity(robot.idealLauncherVelocity);
             sleep(robot.motorRampUpTime); // Ramp up motor
-            robot.activateKicker();
             robot.deactivateIntakeLimiter();
             sleep(150);
             robot.activateKicker();
