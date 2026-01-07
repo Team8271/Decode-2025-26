@@ -1,0 +1,269 @@
+package org.firstinspires.ftc.teamcode.robot;
+
+import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.util.Range;
+
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+
+@TeleOp(name = "TheBestTeleEverMade")
+public class TheBestTeleEverMade extends LinearOpMode {
+    Config robot;
+    private Follower follower;
+    public static Pose startingPose;
+
+    // TODO: Limelight pose updating
+    // TODO: Limelight correction but if no data switch to odometry
+
+    boolean debounce = false;
+    boolean launcherDebounce = false;
+    boolean changeAllianceDebounce = false;
+    boolean intakeAssemblyIsActive = false;
+    boolean intakeAssemblyIsReversed = false;
+
+    double targetHeading;
+    //boolean correctHeading = false;
+    boolean aimAssist = false;
+
+    double lastTx = 0;
+
+    @Override
+    public void runOpMode() {
+        robot = new Config(null, this);
+
+        follower = Constants.createFollower(hardwareMap);
+        follower.update();
+
+        robot.init();
+        robot.setAlliance(Config.Alliance.RED);
+
+
+        //TODO: Not working, Seems Red/Blue flipped
+        resetPose(0, 0, robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180));
+
+        telemetry.addData("Alliance", robot.alliance);
+        telemetry.update();
+        //follower.setStartingPose(startingPose == null ? new Pose() : startingPose);
+
+        waitForStart();
+
+        while (opModeIsActive()) {
+            follower.update();
+
+            // Driver 1 Controls
+            double axialControl = -gamepad1.left_stick_y;  // y axis
+            double lateralControl = gamepad1.left_stick_x; // x axis
+            double yawControl = gamepad1.right_stick_x;    // z axis
+            double throttle = .3+(gamepad1.right_trigger*0.8); // throttle
+            boolean resetFCD = gamepad1.dpad_up; // z axis reset
+            boolean enableAimAssist = gamepad1.cross;
+
+            double gamepadRadians = Math.atan2(lateralControl, axialControl);
+            double gamepadHypot = Range.clip(Math.hypot(lateralControl, axialControl), 0, 1);
+            double robotRadians = getHeading();
+            double targetRadians = gamepadRadians + robotRadians;
+            double lateral = Math.sin(targetRadians)*gamepadHypot;
+            double axial = Math.cos(targetRadians)*gamepadHypot;
+
+            if (enableAimAssist) {
+                aimAssist = true;
+            }
+
+            if (Math.abs(yawControl) >= 0.1) {
+                aimAssist = false;
+            }
+
+            if (resetFCD) {
+                double heading = robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180);
+                resetPose(0,0,heading);
+                gamepad1.rumble(100);
+                log("FCD Reset");
+            }
+
+            if (aimAssist) {
+                // Aim Assist is active
+                double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),robot.alliance.getPose());
+
+                double error = follower.getHeading()-headingCalc;
+
+                telemetry.addData("AA ERROR", error);
+
+                yawControl = robot.aimAssist.headingPID.calculate(error);
+
+                // Drive
+                setTeleOpDrive(axial, lateral, yawControl, throttle, false);
+            }
+            else {
+                // Driver 1 Controlling
+                robot.aimAssist.headingPID.reset();
+
+                // Drive
+                setTeleOpDrive(axial, lateral, yawControl, throttle, true);
+            }
+
+
+
+            // Driver 2 Controls
+            boolean launchOneArtifact = gamepad2.a;
+            boolean launchThreeArtifacts = gamepad2.y;
+            boolean intakeAssemblyToggle = gamepad2.b;
+            boolean reverseIntakeAssemblyToggle = gamepad2.x;
+            boolean changeAlliance = gamepad2.options;
+
+            if (launchOneArtifact && !launcherDebounce) {
+                robot.launcherThread.launchOne();
+                gamepad1.rumble(0.8,0.8,125);
+                gamepad2.rumble(0.8,0.8,125);
+                launcherDebounce = true;
+            }
+            if (launchThreeArtifacts && !launcherDebounce) {
+                robot.launcherThread.launchThree();
+                gamepad1.rumble(0.8,0.8,125);
+                gamepad2.rumble(0.8,0.8,125);
+                launcherDebounce = true;
+            }
+            if (!launchOneArtifact && !launchThreeArtifacts && launcherDebounce) {
+                launcherDebounce = false;
+            }
+
+            if (intakeAssemblyToggle && !debounce) {
+                if(!intakeAssemblyIsActive || intakeAssemblyIsReversed) {
+                    robot.runIntakeAssembly();
+                    intakeAssemblyIsActive = true;
+                }
+                else {
+                    robot.stopIntakeAssembly();
+                    intakeAssemblyIsActive = false;
+                }
+
+                intakeAssemblyIsReversed = false;
+                debounce = true;
+            }
+            if (reverseIntakeAssemblyToggle && !debounce) {
+                robot.reverseIntakeAssembly();
+                intakeAssemblyIsReversed = true;
+
+            }
+            if (!intakeAssemblyToggle && !reverseIntakeAssemblyToggle && debounce) {
+                debounce = false;
+            }
+
+            if(changeAlliance && !changeAllianceDebounce) {
+                switch(robot.alliance) {
+                    case RED:
+                        robot.setAlliance(Config.Alliance.BLUE);
+                        break;
+                    case BLUE:
+                        robot.setAlliance(Config.Alliance.RED);
+                        break;
+                }
+                gamepad2.rumble(200);
+                changeAllianceDebounce = true;
+            }
+            if(!changeAlliance && changeAllianceDebounce) {
+                changeAllianceDebounce = false;
+            }
+
+            telemetry.addData("Launcher Velocity", robot.idealLauncherVelocity);
+            telemetry.addData("Intake Velocity", robot.intakeMotor.getVelocity());
+            telemetry.addData("Position", follower.getPose());
+
+            // One Driver Telemetry
+            telemetry.addLine(
+                    "  Gamepad1:\n" +
+                    "    Axial Control - Left Stick Y\n" +
+                    "    Lateral Control - Left Stick X\n" +
+                    "    Yaw Control - Right Stick X\n" +
+                    "    Throttle - Right Trigger\n" +
+                    "    FCD Reset - dPad Up\n" +
+                    "  Gamepad2:\n" +
+                    "    Launch One Artifact - A\n" +
+                    "    Launch Three Artifacts - Y\n" +
+                    "    Agitator Assembly - B\n" +
+                    "    Increase Launcher Power - dPad Up\n" +
+                    "    Decrease Launcher Power - dPad Down");
+
+            telemetry.update();
+        }
+    }
+
+    private void runSelector() {
+
+        // Read last alliance from file
+        robot.alliance = robot.readAllianceFromFile();
+
+        // Button state tracking for edge detection
+        boolean lastDpadDown = false;
+
+        while (!isStarted() && !isStopRequested()) {
+
+            boolean dpadDown = gamepad1.dpad_down || gamepad2.dpad_down;
+            boolean dpadDownPressed = dpadDown && !lastDpadDown;
+
+            if (dpadDownPressed) {
+
+                switch (robot.alliance) {
+                    case BLUE:
+                        robot.setAlliance(Config.Alliance.RED);
+                        break;
+                    case RED:
+                        robot.setAlliance(Config.Alliance.BLUE);
+                        break;
+                }
+
+            }
+
+            lastDpadDown = dpadDown;
+
+            telemetry.addData("Alliance", robot.alliance.toString());
+            telemetry.addLine("\nPress START");
+            telemetry.update();
+
+            // Don't hog system
+            sleep(50);
+        }
+        robot.saveAllianceToFile(robot.alliance);
+    }
+
+    private void setTeleOpDrive(double axial, double lateral, double yaw, double throttle, boolean throttleEffectsYaw) {
+        double axialScaled = axial * throttle;
+        double lateralScaled = lateral * throttle;
+        double yawScaled = throttleEffectsYaw ? yaw * throttle : yaw;
+
+        double leftFrontPower  = axialScaled + lateralScaled + yawScaled;
+        double rightFrontPower = axialScaled - lateralScaled - yawScaled;
+        double leftBackPower   = axialScaled - lateralScaled + yawScaled;
+        double rightBackPower  = axialScaled + lateralScaled - yawScaled;
+
+        double max = Math.max(1.0,
+                    Math.max(Math.abs(leftFrontPower),
+                    Math.max(Math.abs(rightFrontPower),
+                    Math.max(Math.abs(leftBackPower),
+                    Math.abs(rightBackPower)))));
+
+        robot.fl.setPower(leftFrontPower / max);
+        robot.fr.setPower(rightFrontPower / max);
+        robot.bl.setPower(leftBackPower / max);
+        robot.br.setPower(rightBackPower / max);
+    }
+
+    private double getX() {
+        return follower.getPose().getX();
+    }
+    private double getY() {
+        return follower.getPose().getY();
+    }
+    private double getHeading() {
+        return follower.getPose().getHeading();
+    }
+    private void resetPose(double x, double y, double heading) {
+        follower.setPose(new Pose(x,y,heading));
+    }
+
+    private void log(String message) {
+        robot.log("[TBTEM] - " + message);
+    }
+
+}

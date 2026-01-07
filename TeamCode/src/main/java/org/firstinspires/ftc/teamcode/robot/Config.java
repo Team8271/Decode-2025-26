@@ -25,7 +25,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
@@ -78,7 +77,7 @@ public class Config {
 
     // Other Hardware
     public Limelight3A limelightCamera;
-    public IMU imu;
+    //public IMU imu;
 
     public Motif motif;
 
@@ -96,8 +95,12 @@ public class Config {
     }
 
     public enum Alliance {
-        RED,
-        BLUE;
+        RED(new Pose(144,144)),
+        BLUE(new Pose(0, 144));
+
+        private final Pose alliance;
+        Alliance(Pose alliance) { this.alliance = alliance; }
+        public Pose getPose() { return alliance; }
     }
 
     public enum DriverAmount {
@@ -140,12 +143,12 @@ public class Config {
         }
 
         // IMU
-        imu = hwMap.get(IMU.class, "imu");
-        RevHubOrientationOnRobot.LogoFacingDirection logo = RevHubOrientationOnRobot.LogoFacingDirection.DOWN;
-        RevHubOrientationOnRobot.UsbFacingDirection usb = RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
+        //imu = hwMap.get(IMU.class, "imu");
+        //RevHubOrientationOnRobot.LogoFacingDirection logo = RevHubOrientationOnRobot.LogoFacingDirection.DOWN;
+        //RevHubOrientationOnRobot.UsbFacingDirection usb = RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
 
-        RevHubOrientationOnRobot orientationOnRobot = new RevHubOrientationOnRobot(logo, usb);
-        imu.initialize(new IMU.Parameters(orientationOnRobot));
+        //RevHubOrientationOnRobot orientationOnRobot = new RevHubOrientationOnRobot(logo, usb);
+        //imu.initialize(new IMU.Parameters(orientationOnRobot));
 
         // Front Left Drive
         fl = hwMap.get(DcMotorEx.class, "fl");
@@ -210,11 +213,13 @@ public class Config {
         launcherThread = new LauncherThread();
         launcherThread.setConfig(this);
 
+        limelight = new Limelight(this);
+
         // Starts Threads
         checkAndRestartThreads();
 
         // Aim Assist
-        aimAssist = new AimAssist(this);
+        aimAssist = new AimAssist(this,1.5,0,0,0.6);
 
         // Limelight3A Camera
         limelightCamera = hwMap.get(Limelight3A.class, "limelight");
@@ -248,7 +253,9 @@ public class Config {
         log("Robot Initialized");
     }
 
-    /// Initializes TweetyBird.
+    /** Initializes TweetyBird.
+     * @deprecated In favor of Pedro-Pathing
+     */
     public void initTweetyBird() {
         log("TweetyBird Initialized");
         tweetyBird = new TweetyBird.Builder()
@@ -675,10 +682,10 @@ class LauncherThread extends Thread {
 class Limelight {
     Config robot;
 
+    double timeSincePipelineChange = 0;
+    ElapsedTime pipelineChangeTime = new ElapsedTime();
+
     public Limelight(Config robot) {this.robot = robot;}
-
-    private GoalResults goalResults = new GoalResults();
-
 
     private enum Pipeline {
         LOCALIZATION(0),
@@ -700,13 +707,50 @@ class Limelight {
         // Ensure polling for limelight data
         if (!robot.limelightCamera.isRunning()) {
             robot.log("Limelight: Starting");
+            robot.limelightCamera.setPollRateHz(11);
             robot.limelightCamera.start();
+            pipelineChangeTime.reset();
         }
     }
 
     private void changePipeline(Pipeline pipeline) {
         // Set desired pipeline
-        robot.limelightCamera.pipelineSwitch(pipeline.getValue());
+        if(timeSincePipelineChange < 15) {
+            try {
+                Thread.sleep(15);
+            } catch (InterruptedException e) {
+                log("Pipeline Change Error: " + e);
+            }
+
+        }
+        if (robot.limelightCamera.getStatus().getPipelineIndex() != pipeline.getValue()) {
+            robot.limelightCamera.pipelineSwitch(pipeline.getValue());
+        }
+        timeSincePipelineChange = pipelineChangeTime.milliseconds();
+    }
+
+    double lastTx = 0;
+
+    public double scanGoalTx() {
+        startLimelight();
+
+        if(robot.alliance == Config.Alliance.BLUE) {
+            changePipeline(Pipeline.BLUE_GOAL);
+        }
+        else {
+            changePipeline(Pipeline.RED_GOAL);
+        }
+
+        // Get latest results
+        LLResult result = robot.limelightCamera.getLatestResult();
+
+        if(result != null && result.isValid()) {
+            log("ScanGoalTx = " + result.getTx());
+            lastTx = result.getTx();
+            return result.getTx();
+        }
+        log("ScanGoalTx = d " + lastTx);
+        return lastTx;
     }
 
     public GoalResults scanGoalAngle() {
@@ -724,6 +768,7 @@ class Limelight {
         // Get latest results
         LLResult result = robot.limelightCamera.getLatestResult();
 
+        GoalResults goalResults = new GoalResults();
         // Update angles
         if (result != null && result.isValid()) {
             goalResults.setResults(true,result.getTx(),
@@ -815,14 +860,60 @@ class AimAssist {
 
     Config robot;
 
-    public AimAssist(Config robot) {
+    HeadingPID headingPID;
+
+    public AimAssist(Config robot, double kP, double kI, double kD, double maxPower) {
         this.robot = robot;
+        headingPID = new HeadingPID(kP, kI, kD);
+        headingPID.setOutputLimits(maxPower);
         log("Ready.");
+    }
+
+    public double getCorrectionYaw(Pose currentPose, Pose targetToFace) {
+        double headingCalc = robot.aimAssist.getHeadingForTarget(currentPose,targetToFace);
+        return currentPose.getHeading()-headingCalc;
+    }
+
+    /**
+     * Calculates desired heading to face a position on a pedro-field.
+     * @param currentPose Robot current position on the field <b>(must be correct)</b>
+     * @param targetToFace Pose of the desired position to be facing
+     * @return The correct heading in radians to face the target Pose
+     */
+    public double getHeadingForTarget(Pose currentPose, Pose targetToFace) {
+        // Robot's current state
+        double robotX = currentPose.getX();
+        double robotY = currentPose.getY();
+        double currentZ = currentPose.getHeading(); // Heading in radians
+
+        // Target coordinates
+        double targetX = targetToFace.getX();
+        double targetY = targetToFace.getY();
+
+        // Calculate the target heading in the field frame
+        double deltaX = targetX - robotX;
+        double deltaY = targetY - robotY;
+        double targetHeading = Math.atan2(deltaY, deltaX);
+
+        return targetHeading;
+    }
+
+    /**
+     * Wraps angles (Radians).
+     * @param angle Radian angle.
+     * @return Normalized angle between -pi and pi.
+     */
+    public static double angleWrap(double angle) {
+        while (angle > Math.PI) angle -= 2 * Math.PI;
+        while (angle < -Math.PI) angle += 2 * Math.PI;
+        return angle;
     }
 
     /**
      * Corrects robot heading to align with alliance goal.
      * Unless opMode stops, timeOut, or cancelCorrection.
+     *
+     * @deprecated not working
      *
      * @apiNote For cancelCorrection to work, this must be run in a different thread,
      * as runCorrection utilizes a while loop to complete its task.
@@ -878,26 +969,45 @@ class AimAssist {
     }
 
     /**
+     *
+     * @return The correct alliance goal heading.
+     */
+    public double simpleGoalHeading() {
+        if(robot.alliance == Config.Alliance.RED) {
+            return Math.toRadians(135);
+        }
+        else{
+            return Math.toRadians(50); // Why flipped ??? Idk
+        }
+    }
+
+    /**
      * Using robot pose, calculate the correct heading for backboard shots.
      *
-     * @return PedroHeading in radians
+     * @return Correct heading in radians
+     * @apiNote Robot pose must be correct for proper functionality
+     *
+     * <h3>NOT WORKING</h3>
+     * @deprecated In favor of getHeadingForTarget
      */
     public double runHeadingCalculation(Pose currentPose) {
-        Pose blueGoal = new Pose(-58.3727, -55.6425);
-        Pose redGoal = new Pose(-58.3727, 55.6425);
+        //Pose blueGoal = new Pose(-58.3727, -55.6425);
+        Pose blueGoal = new Pose(0, 144);
+        //Pose redGoal = new Pose(-58.3727, 55.6425);
+        Pose redGoal = new Pose(144, 144);
         Pose goal;
         boolean rotateLeft = true;
-        double blueGoalHeading = 135;
-        double redGoalHeading = 50;
+        double blueGoalHeading = Math.toRadians(135);
+        double redGoalHeading = Math.toRadians(50);
         double goalHeading = blueGoalHeading;
         if(robot.alliance == Config.Alliance.RED) {
             goal = redGoal;
             goalHeading = redGoalHeading;
-
         }
         else {
             goal = blueGoal;
         }
+        log("Current.getHeading() = " + currentPose.getHeading());
 
         if(currentPose.getHeading() > goalHeading) {
             // Rotate Right
@@ -907,20 +1017,86 @@ class AimAssist {
 
         double currentX = currentPose.getX();
         double currentY = currentPose.getY();
-        double adjacentLeg = Math.sqrt(Math.pow(currentY-goal.getY(),2) + Math.pow(currentX-goal.getX(),2));
+        double hypot = Math.sqrt(Math.pow(currentY-goal.getY(),2) + Math.pow(currentX-goal.getX(),2));
         double oppositeLeg = 18; // Distance from apriltag to backboard;
 
-        double headingCorrection = Math.atan(oppositeLeg/adjacentLeg); // Angular Dist from correct heading
+        log("Hypot = " + hypot);
+        double headingCorrection = Math.asin(oppositeLeg/hypot); // Angular Dist from correct heading
 
-        if(rotateLeft) {
-            headingCorrection += currentPose.getHeading();
-        }
-        else { // Rotate Right
-            headingCorrection -= currentPose.getHeading();
-        }
+        log("Angular dist from heading = " + headingCorrection);
+        double desiredHeading = currentPose.getHeading() + headingCorrection;
 
+        //if(rotateLeft) {
+        //    headingCorrection += currentPose.getHeading();
+        //    desiredHeading = currentPose.getHeading() + headingCorrection;
+        //}
+        //else { // Rotate Right
+        //    headingCorrection -= currentPose.getHeading();
+        //    desiredHeading = currentPose.getHeading() - headingCorrection;
+        //}
+        //headingCorrection = desiredHeading-currentPose.getHeading();
+
+        log("Heading Calculation yields: " + headingCorrection);
         return headingCorrection; // Return
 
+    }
+
+    class HeadingPID {
+
+        private double kP;
+        private double kI;
+        private double kD;
+
+        private double integralSum = 0.0;
+        private double lastError = 0.0;
+        private long lastTime;
+
+        private double minOutput = -1.0;
+        private double maxOutput = 1.0;
+
+        public HeadingPID(double kP, double kI, double kD) {
+            this.kP = kP;
+            this.kI = kI;
+            this.kD = kD;
+            lastTime = System.nanoTime();
+        }
+
+        public void setOutputLimits(double max) {
+            minOutput = -max;
+            maxOutput = max;
+        }
+
+        public void reset() {
+            integralSum = 0.0;
+            lastError = 0.0;
+            lastTime = System.nanoTime();
+        }
+
+        /**
+         *
+         * @param error Distance in radians from target heading (AutoWrapped)
+         * @apiNote Use AimAssist's getHeadingForTarget() for calculating error
+         * @return A value between -1 and 1 used for yaw motions
+         */
+        public double calculate(double error) {
+
+            error = AimAssist.angleWrap(error);
+
+            long now = System.nanoTime();
+            double deltaTime = (now - lastTime) / 1e9;
+            lastTime = now;
+
+            integralSum += error * deltaTime;
+            double derivative = deltaTime > 0 ? (error - lastError) / deltaTime : 0.0;
+            lastError = error;
+
+            double output = (kP * error) + (kI * integralSum) + (kD * derivative);
+
+            if (output > maxOutput) output = maxOutput;
+            if (output < minOutput) output = minOutput;
+
+            return output;
+        }
     }
 
     /**
@@ -932,8 +1108,6 @@ class AimAssist {
         double x = goalAngles.goalTy;
         robot.idealLauncherVelocity = -2.46914*Math.pow(x,3)+74.07407*Math.pow(x,2)-751.85185*x+3880.24691;
         log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
-
-
 
         /*
         double x = robot.goalAvgDist;
