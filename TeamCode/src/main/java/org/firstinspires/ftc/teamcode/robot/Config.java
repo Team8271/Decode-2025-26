@@ -52,8 +52,6 @@ public class Config {
     public boolean devBool = false;
 
     // This value will be changed with Limelight sensing to get the ideal power
-    /// @deprecated in favor of launcher velocity
-    public double idealLauncherPower = 1;
     public double idealLauncherVelocity = 1900; // !! WARNING, VALUE USED IN AUTO... 0-2500 effective range
 
     private double  desiredLeftKickerPosition = storeLeftKickerPosition,
@@ -914,65 +912,6 @@ class AimAssist {
     }
 
     /**
-     * Corrects robot heading to align with alliance goal.
-     * Unless opMode stops, timeOut, or cancelCorrection.
-     *
-     * @deprecated not working
-     *
-     * @apiNote For cancelCorrection to work, this must be run in a different thread,
-     * as runCorrection utilizes a while loop to complete its task.
-     *
-     * @param timeOut Max time AimAssist can work in seconds.
-     */
-    public void runAngleCorrection(double timeOut) {
-
-        ElapsedTime runtime = new ElapsedTime();
-        runtime.reset();
-
-        if(!goalAngles.goalAnglesAreValid) {
-            log("Goal Angles Invalid, Cancelling.");
-            return;
-        }
-
-        double desiredTx;
-
-        if(robot.alliance == Config.Alliance.RED) {
-            desiredTx = redDesiredTx;
-            log("Correcting for Red.");
-        }
-        else {
-            desiredTx = blueDesiredTx;
-            log("Correcting for Blue.");
-        }
-
-        log("Entering loop.");
-        while(robot.opModeisActive() && timeOut > runtime.time()) {
-            goalAngles = robot.limelight.scanGoalAngle();
-
-
-            double distance = Math.abs(goalAngles.goalTx - desiredTx);
-            correctionPower = Range.clip(distance*scaleFactor, 0.1, 0.2);
-
-
-            if(distance < 0.5) {
-                log("Within tolerance, Closing Loop...");
-                break;
-            }
-            else if(goalAngles.goalTx > desiredTx) {
-                // Rotate right
-                robot.setWheelPower(correctionPower,-correctionPower,correctionPower,-correctionPower);
-            }
-            else if(goalAngles.goalTx < desiredTx) {
-                // Rotate left
-                robot.setWheelPower(-correctionPower,correctionPower,-correctionPower,correctionPower);
-            }
-        }
-        robot.setWheelPower(0,0,0,0);
-        log("Loop Closed.");
-
-    }
-
-    /**
      *
      * @return The correct alliance goal heading.
      */
@@ -983,66 +922,6 @@ class AimAssist {
         else{
             return Math.toRadians(50); // Why flipped ??? Idk
         }
-    }
-
-    /**
-     * Using robot pose, calculate the correct heading for backboard shots.
-     *
-     * @return Correct heading in radians
-     * @apiNote Robot pose must be correct for proper functionality
-     *
-     * <h3>NOT WORKING</h3>
-     * @deprecated In favor of getHeadingForTarget
-     */
-    public double runHeadingCalculation(Pose currentPose) {
-        //Pose blueGoal = new Pose(-58.3727, -55.6425);
-        Pose blueGoal = new Pose(0, 144);
-        //Pose redGoal = new Pose(-58.3727, 55.6425);
-        Pose redGoal = new Pose(144, 144);
-        Pose goal;
-        boolean rotateLeft = true;
-        double blueGoalHeading = Math.toRadians(135);
-        double redGoalHeading = Math.toRadians(50);
-        double goalHeading = blueGoalHeading;
-        if(robot.alliance == Config.Alliance.RED) {
-            goal = redGoal;
-            goalHeading = redGoalHeading;
-        }
-        else {
-            goal = blueGoal;
-        }
-        log("Current.getHeading() = " + currentPose.getHeading());
-
-        if(currentPose.getHeading() > goalHeading) {
-            // Rotate Right
-            rotateLeft = false;
-            // Otherwise it needs to rotate left
-        }
-
-        double currentX = currentPose.getX();
-        double currentY = currentPose.getY();
-        double hypot = Math.sqrt(Math.pow(currentY-goal.getY(),2) + Math.pow(currentX-goal.getX(),2));
-        double oppositeLeg = 18; // Distance from apriltag to backboard;
-
-        log("Hypot = " + hypot);
-        double headingCorrection = Math.asin(oppositeLeg/hypot); // Angular Dist from correct heading
-
-        log("Angular dist from heading = " + headingCorrection);
-        double desiredHeading = currentPose.getHeading() + headingCorrection;
-
-        //if(rotateLeft) {
-        //    headingCorrection += currentPose.getHeading();
-        //    desiredHeading = currentPose.getHeading() + headingCorrection;
-        //}
-        //else { // Rotate Right
-        //    headingCorrection -= currentPose.getHeading();
-        //    desiredHeading = currentPose.getHeading() - headingCorrection;
-        //}
-        //headingCorrection = desiredHeading-currentPose.getHeading();
-
-        log("Heading Calculation yields: " + headingCorrection);
-        return headingCorrection; // Return
-
     }
 
     class HeadingPID {
