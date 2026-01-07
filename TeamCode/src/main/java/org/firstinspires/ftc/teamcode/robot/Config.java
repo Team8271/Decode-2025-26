@@ -253,6 +253,10 @@ public class Config {
         log("Robot Initialized");
     }
 
+    public void aimAssistInit() {
+        aimAssist = new AimAssist(this,1.5,0,0,0.6);
+    }
+
     /** Initializes TweetyBird.
      * @deprecated In favor of Pedro-Pathing
      */
