@@ -5,14 +5,12 @@ import android.util.Log;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -37,7 +35,7 @@ public class Config {
 
     // Changeable Power Values
     public final double
-            agitatorActivePower = 1, intakeMotorOnVelocity = 500, intakeMotorOffVelocity = 0;
+            agitatorActivePower = 1, intakeMotorOnPower = 0.3, intakeMotorOffPower = 0;
 
     private final double
             storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1 - storeLeftKickerPosition,
@@ -445,12 +443,12 @@ public class Config {
     }
 
     public void runIntakeAssembly() {
-        intakeMotor.setVelocity(intakeMotorOnVelocity);
+        intakeMotor.setPower(intakeMotorOnPower);
         agitator.setPower(agitatorActivePower);
     }
 
     public void stopIntakeAssembly() {
-        intakeMotor.setVelocity(intakeMotorOffVelocity);
+        intakeMotor.setPower(intakeMotorOffPower);
         agitator.setPower(0);
     }
 
@@ -473,7 +471,7 @@ public class Config {
     }
 
     public void reverseIntakeAssembly() {
-        intakeMotor.setVelocity(-intakeMotorOnVelocity);
+        intakeMotor.setPower(-intakeMotorOnPower);
         agitator.setPower(-agitatorActivePower);
     }
 
@@ -572,7 +570,7 @@ class LauncherThread extends Thread {
             double agitatorStartPower = robot.agitator.getPower();
 
             robot.agitator.setPower(robot.agitatorActivePower);
-            robot.intakeMotor.setVelocity(200);
+            robot.intakeMotor.setPower(robot.intakeMotorOnPower);
 
             //robot.aimAssist.runAngleCorrection(5);
             //robot.aimAssist.runPowerCalculation();
@@ -616,7 +614,7 @@ class LauncherThread extends Thread {
             sleep(1500);
         }
         robot.agitator.setPower(0);
-        robot.intakeMotor.setVelocity(0);
+        robot.intakeMotor.setPower(0);
         robot.launcherMotor.setPower(0);
         log("Launcher set to Idle");
     }
