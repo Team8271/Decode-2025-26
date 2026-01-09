@@ -17,9 +17,6 @@ public class TheBestTeleEverMade extends LinearOpMode {
     // TODO: Limelight pose updating
     // TODO: Limelight correction but if no data switch to odometry
 
-    boolean debounce = false;
-    boolean launcherDebounce = false;
-    boolean changeAllianceDebounce = false;
     boolean intakeAssemblyIsActive = false;
     boolean intakeAssemblyIsReversed = false;
 
@@ -106,11 +103,11 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
 
             // Driver 2 Controls
-            boolean launchOneArtifact = gamepad2.a;
-            boolean launchThreeArtifacts = gamepad2.y;
-            boolean intakeAssemblyToggle = gamepad2.b;
-            boolean reverseIntakeAssemblyToggle = gamepad2.x;
-            boolean changeAlliance = gamepad2.options;
+            boolean launchOneArtifact = gamepad2.aWasPressed();
+            boolean launchThreeArtifacts = gamepad2.yWasPressed();
+            boolean intakeAssemblyToggle = gamepad2.bWasPressed();
+            boolean reverseIntakeAssemblyToggle = gamepad2.xWasPressed();
+            boolean changeAlliance = gamepad2.optionsWasPressed();
             boolean cancelLaunch = gamepad2.dpadLeftWasPressed();
 
             if(cancelLaunch) {
@@ -118,23 +115,18 @@ public class TheBestTeleEverMade extends LinearOpMode {
                 robot.launcherThread.cancelLaunch();
             }
 
-            if (launchOneArtifact && !launcherDebounce) {
+            if (launchOneArtifact) {
                 robot.launcherThread.launchOne();
                 gamepad1.rumble(0.8,0.8,125);
                 gamepad2.rumble(0.8,0.8,125);
-                launcherDebounce = true;
             }
-            if (launchThreeArtifacts && !launcherDebounce) {
+            if (launchThreeArtifacts) {
                 robot.launcherThread.launchThree();
                 gamepad1.rumble(0.8,0.8,125);
                 gamepad2.rumble(0.8,0.8,125);
-                launcherDebounce = true;
-            }
-            if (!launchOneArtifact && !launchThreeArtifacts && launcherDebounce) {
-                launcherDebounce = false;
             }
 
-            if (intakeAssemblyToggle && !debounce) {
+            if (intakeAssemblyToggle) {
                 if(!intakeAssemblyIsActive || intakeAssemblyIsReversed) {
                     robot.runIntakeAssembly();
                     intakeAssemblyIsActive = true;
@@ -143,20 +135,15 @@ public class TheBestTeleEverMade extends LinearOpMode {
                     robot.stopIntakeAssembly();
                     intakeAssemblyIsActive = false;
                 }
-
                 intakeAssemblyIsReversed = false;
-                debounce = true;
             }
-            if (reverseIntakeAssemblyToggle && !debounce) {
+            if (reverseIntakeAssemblyToggle) {
                 robot.reverseIntakeAssembly();
                 intakeAssemblyIsReversed = true;
 
             }
-            if (!intakeAssemblyToggle && !reverseIntakeAssemblyToggle && debounce) {
-                debounce = false;
-            }
 
-            if(changeAlliance && !changeAllianceDebounce) {
+            if(changeAlliance) {
                 switch(robot.alliance) {
                     case RED:
                         robot.setAlliance(Config.Alliance.BLUE);
@@ -166,10 +153,6 @@ public class TheBestTeleEverMade extends LinearOpMode {
                         break;
                 }
                 gamepad2.rumble(200);
-                changeAllianceDebounce = true;
-            }
-            if(!changeAlliance && changeAllianceDebounce) {
-                changeAllianceDebounce = false;
             }
 
             telemetry.addData("Launcher Velocity", robot.idealLauncherVelocity);
