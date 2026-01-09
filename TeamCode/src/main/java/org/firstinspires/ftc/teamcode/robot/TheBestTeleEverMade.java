@@ -111,6 +111,12 @@ public class TheBestTeleEverMade extends LinearOpMode {
             boolean intakeAssemblyToggle = gamepad2.b;
             boolean reverseIntakeAssemblyToggle = gamepad2.x;
             boolean changeAlliance = gamepad2.options;
+            boolean cancelLaunch = gamepad2.dpadLeftWasPressed();
+
+            if(cancelLaunch) {
+                log("Canceling launch");
+                robot.launcherThread.cancelLaunch();
+            }
 
             if (launchOneArtifact && !launcherDebounce) {
                 robot.launcherThread.launchOne();

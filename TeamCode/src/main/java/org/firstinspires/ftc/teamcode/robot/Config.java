@@ -630,6 +630,27 @@ class LauncherThread extends Thread {
     private void idleLauncher() throws InterruptedException {
         idleLauncher(false);
     }
+
+    public void cancelLaunch() {
+        if(robot.launcherThread.isBusy) {
+            log("Cancel: Interrupting launcher");
+            robot.launcherThread.interrupt();
+            log("Cancel: Idling Launcher");
+            try {
+                idleLauncher();
+            } catch (InterruptedException e) {
+                log("Cancel: Failed to Safe Idle Launcher, Force Idling Launcher");
+                try {
+                    idleLauncher(true);
+                } catch (InterruptedException ex) {
+                    log("Cancel: Failed to Force Idle Launcher");
+                }
+
+            }
+        }
+
+    }
+
     /**
      * @deprecated Using doLaunch for both three and two currently.
      * @throws InterruptedException
