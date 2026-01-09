@@ -8,7 +8,7 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
-@TeleOp(name = "TheBestTeleEverMade")
+@TeleOp(name = "! TheBestTeleEverMade !")
 public class TheBestTeleEverMade extends LinearOpMode {
     Config robot;
     private Follower follower;
