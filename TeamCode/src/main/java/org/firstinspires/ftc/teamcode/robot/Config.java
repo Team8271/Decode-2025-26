@@ -530,7 +530,6 @@ class LauncherThread extends Thread {
                     doLaunch(3);
                 } catch (Exception e) {
                     log("ERROR while LaunchThree: " + e);
-                    interrupt();
                 }
             }
             else {
@@ -538,7 +537,6 @@ class LauncherThread extends Thread {
                     doLaunch(1);
                 } catch (Exception e) {
                     log("ERROR while LaunchOne: " + e);
-                    interrupt();
                 }
             }
 
