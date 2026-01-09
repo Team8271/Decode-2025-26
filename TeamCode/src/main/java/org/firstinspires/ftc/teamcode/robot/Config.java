@@ -1004,7 +1004,7 @@ class AimAssist {
     public void runPowerCalculation() {
 
         double x = goalAngles.goalTy;
-        robot.idealLauncherVelocity = -2.46914*Math.pow(x,3)+74.07407*Math.pow(x,2)-751.85185*x+3880.24691;
+        double idealLauncherVelocity = 0.0197859*Math.pow(x,2)+1.33493*x+967.92439;
         log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
 
         /*
