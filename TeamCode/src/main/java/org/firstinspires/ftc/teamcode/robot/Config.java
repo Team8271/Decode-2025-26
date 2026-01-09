@@ -502,6 +502,7 @@ class LauncherThread extends Thread {
 
     private volatile boolean launchThree = false;
     private volatile boolean isBusy = false;
+    private volatile double targetLauncherVelocity = 1300;
 
     private volatile boolean running = true; // When false, thread terminates
 
@@ -553,15 +554,40 @@ class LauncherThread extends Thread {
         return isBusy;
     }
 
-    private void setLauncherVelocity(double velocity) {
-        robot.launcherMotor.setVelocity(velocity);
-    }
-
+    //TODO: Fix
+    /**
+     * Seems not to be working <B>NEEDS FIXED IMEDIENTLY</B>
+     * @param velocity
+     * @throws InterruptedException
+     */
     private void waitForLauncherVelocity(double velocity) throws InterruptedException {
         double curVelocity = robot.launcherMotor.getVelocity();
         while (curVelocity > velocity-20 && curVelocity < velocity+20) {
             curVelocity = robot.launcherMotor.getVelocity();
             sleep(50);
+        }
+    }
+
+    public void setLauncherVelocity(double velocity) {
+        targetLauncherVelocity = velocity;
+    }
+
+    public double getLauncherVelocity() {
+        return targetLauncherVelocity;
+    }
+
+    /**
+     * Sets launch motor to targetLauncherVelocity and waits for velocity to match.
+     * @implNote Use <I>aimAssist.setLauncherVelocity()</I> in an opMode to change this velocity.
+     */
+    private void updateLauncherVelocityAndWait() {
+        double velocity = targetLauncherVelocity; // Prevent race condition
+        robot.launcherMotor.setVelocity(velocity);
+        log("Launcher now running at '" + velocity + "' vel.");
+        try {
+            waitForLauncherVelocity(velocity);
+        } catch (InterruptedException e) {
+            log("Failed to update LauncherVelocity safely: " + e);
         }
     }
 
@@ -575,8 +601,7 @@ class LauncherThread extends Thread {
             //robot.aimAssist.runAngleCorrection(5);
             //robot.aimAssist.runPowerCalculation();
 
-            setLauncherVelocity(robot.idealLauncherVelocity);
-            sleep(robot.motorRampUpTime); // Ramp up motor
+            updateLauncherVelocityAndWait();
             robot.deactivateIntakeLimiter();
             sleep(150);
             robot.activateKicker();
@@ -591,7 +616,7 @@ class LauncherThread extends Thread {
                 robot.intakeMotor.setPower(0.3);
                 sleep(650); // Waiting for artifact to enter kicker
                 if(i==3){
-                    sleep(200); // Additional Wait
+                    sleep(200); // Additional wait for third artifact
                 }
                 robot.activateKicker();
                 robot.waitForKicker();
@@ -933,6 +958,8 @@ class AimAssist {
         double deltaY = targetY - robotY;
         double targetHeading = Math.atan2(deltaY, deltaX);
 
+        //log("target to face " + targetToFace);
+        //log("getHeadingForTarget yields " + targetHeading);
         return targetHeading;
     }
 
@@ -1024,10 +1051,11 @@ class AimAssist {
      *
      * @return the ideal launcher velocity for current position
      */
-    public double runPowerCalculation() {
+    public double runPowerCalculation(Pose currentPose, Pose targetPose) {
 
-        double x = goalAngles.goalTy;
-        double idealLauncherVelocity = 0.0197859*Math.pow(x,2)+1.33493*x+967.92439;
+        // Distance from target represented as x
+        double x = robot.aimAssist.getPoseDistance(currentPose, targetPose);
+        double idealLauncherVelocity = (0.0197859*x*x)+(1.33493*x)+967.92439; // Not using Math.pow for speed sake
         log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
 
         return idealLauncherVelocity;

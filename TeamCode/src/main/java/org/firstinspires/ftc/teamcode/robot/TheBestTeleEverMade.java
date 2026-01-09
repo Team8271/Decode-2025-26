@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 public class TheBestTeleEverMade extends LinearOpMode {
     Config robot;
     private Follower follower;
-    public static Pose startingPose;
+    private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
 
     // TODO: Limelight pose updating
     // TODO: Limelight correction but if no data switch to odometry
@@ -38,7 +38,8 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
 
         //TODO: Not working, Seems Red/Blue flipped
-        resetPose(0, 0, robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180));
+        //resetPose(0, 0, robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180));
+        resetPose(startPose.getX(), startPose.getY(), startPose.getHeading());
 
         telemetry.addData("Alliance", robot.alliance);
         telemetry.update();
@@ -116,11 +117,13 @@ public class TheBestTeleEverMade extends LinearOpMode {
             }
 
             if (launchOneArtifact) {
+                robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
                 robot.launcherThread.launchOne();
                 gamepad1.rumble(0.8,0.8,125);
                 gamepad2.rumble(0.8,0.8,125);
             }
             if (launchThreeArtifacts) {
+                robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
                 robot.launcherThread.launchThree();
                 gamepad1.rumble(0.8,0.8,125);
                 gamepad2.rumble(0.8,0.8,125);
@@ -155,8 +158,8 @@ public class TheBestTeleEverMade extends LinearOpMode {
                 gamepad2.rumble(200);
             }
 
-            telemetry.addData("Launcher Velocity", robot.idealLauncherVelocity);
-            telemetry.addData("Intake Velocity", robot.intakeMotor.getVelocity());
+            telemetry.addData("Launcher Velocity", robot.launcherThread.getLauncherVelocity());
+            telemetry.addData("Intake Power", robot.intakeMotor.getPower());
             telemetry.addData("Position", follower.getPose());
 
             // One Driver Telemetry
