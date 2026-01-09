@@ -562,7 +562,9 @@ class LauncherThread extends Thread {
     }
 
     private void waitForLauncherVelocity(double velocity) throws InterruptedException {
-        while (robot.launcherMotor.getVelocity() != velocity) {
+        double curVelocity = robot.launcherMotor.getVelocity();
+        while (curVelocity > velocity-20 && curVelocity < velocity+20) {
+            curVelocity = robot.launcherMotor.getVelocity();
             sleep(50);
         }
     }
