@@ -1001,18 +1001,13 @@ class AimAssist {
      * Sets robot ideal launch velocity for current position
      * using Limelight camera.
      */
-    public void runPowerCalculation() {
+    public double runPowerCalculation() {
 
         double x = goalAngles.goalTy;
         double idealLauncherVelocity = 0.0197859*Math.pow(x,2)+1.33493*x+967.92439;
         log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
 
-        /*
-        double x = robot.goalAvgDist;
-        robot.idealLauncherVelocity = (989.29847*x)+255.92292;
-        log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
-
-         */
+        return idealLauncherVelocity;
 
     }
 
