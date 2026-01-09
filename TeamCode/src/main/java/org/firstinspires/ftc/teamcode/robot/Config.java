@@ -630,6 +630,10 @@ class LauncherThread extends Thread {
     private void idleLauncher() throws InterruptedException {
         idleLauncher(false);
     }
+    /**
+     * @deprecated Using doLaunch for both three and two currently.
+     * @throws InterruptedException
+     */
     private void doLaunchThree() throws InterruptedException {
 
         robot.agitator.setPower(robot.agitatorActivePower);
@@ -999,7 +1003,9 @@ class AimAssist {
 
     /**
      * Sets robot ideal launch velocity for current position
-     * using Limelight camera.
+     * using odometry and camera positioning.
+     *
+     * @return the ideal launcher velocity for current position
      */
     public double runPowerCalculation() {
 
