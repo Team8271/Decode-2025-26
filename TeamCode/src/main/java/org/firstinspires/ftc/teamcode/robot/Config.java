@@ -600,14 +600,7 @@ class LauncherThread extends Thread {
             }
 
             // Go to IDLE mode
-            robot.agitator.setPower(-robot.agitatorActivePower);
-            robot.storeKicker();
-            robot.activateIntakeLimiter();
-            sleep(1500);
-            //robot.agitator.setPower(agitatorStartPower);
-            robot.agitator.setPower(0);
-            robot.intakeMotor.setVelocity(0);
-            robot.launcherMotor.setPower(0);
+            idleLauncher();
 
         }
         catch (InterruptedException e) {
@@ -615,6 +608,26 @@ class LauncherThread extends Thread {
         }
     }
 
+    private void idleLauncher(boolean force) throws InterruptedException {
+        robot.agitator.setPower(-robot.agitatorActivePower);
+        robot.storeKicker();
+        robot.activateIntakeLimiter();
+        if(!force){
+            sleep(1500);
+        }
+        robot.agitator.setPower(0);
+        robot.intakeMotor.setVelocity(0);
+        robot.launcherMotor.setPower(0);
+        log("Launcher set to Idle");
+    }
+
+    /**
+     * Sets the Launcher to an Idle state using safe method of clearing kicker path.
+     * @throws InterruptedException if interrupted while waiting for artifacts to exit kicker path.
+     */
+    private void idleLauncher() throws InterruptedException {
+        idleLauncher(false);
+    }
     private void doLaunchThree() throws InterruptedException {
 
         robot.agitator.setPower(robot.agitatorActivePower);
