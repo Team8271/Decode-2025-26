@@ -185,7 +185,7 @@ public class Config {
         launcherMotor = hwMap.get(DcMotorEx.class, "launcher");
         launcherMotor.setDirection(DcMotorEx.Direction.FORWARD);
         launcherMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
-        launcherMotor.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        launcherMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         launcherMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
 
         // Called 'org' in spirit
@@ -554,18 +554,33 @@ class LauncherThread extends Thread {
         return isBusy;
     }
 
-    //TODO: Fix
     /**
-     * Seems not to be working <B>NEEDS FIXED IMEDIENTLY</B>
-     * @param velocity
-     * @throws InterruptedException
+     * Waits for launcher motor to reach target velocity within tolerance.
+     * Includes timeout protection to prevent robot freezing.
+     * @param velocity target velocity
+     * @throws InterruptedException if thread is interrupted
      */
     private void waitForLauncherVelocity(double velocity) throws InterruptedException {
         double curVelocity = robot.launcherMotor.getVelocity();
-        while (curVelocity > velocity-20 && curVelocity < velocity+20) {
+        long startTime = System.currentTimeMillis();
+        long timeoutMs = 5000;
+        
+        while (!(curVelocity >= velocity-20 && curVelocity <= velocity+20)) {
+            if (System.currentTimeMillis() - startTime > timeoutMs) {
+                log("Timeout waiting for launcher velocity. Current: " + curVelocity + ", Target: " + velocity);
+                break;
+            }
+            
+            if (!robot.opModeisActive()) {
+                log("OpMode stopped during velocity wait");
+                break;
+            }
+            
             curVelocity = robot.launcherMotor.getVelocity();
             sleep(50);
         }
+        
+        log("Launcher velocity reached: " + curVelocity + " (target: " + velocity + ")");
     }
 
     public void setLauncherVelocity(double velocity) {
