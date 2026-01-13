@@ -135,6 +135,7 @@ public class Config {
         } else {
             hwMap = opMode.hardwareMap;
             opMode.telemetry.setMsTransmissionInterval(11);
+            opModeIsActive = true;
             usingLinearOpMode = false;
         }
 
