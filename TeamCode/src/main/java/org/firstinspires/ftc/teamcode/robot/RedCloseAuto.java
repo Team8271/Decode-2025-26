@@ -123,7 +123,7 @@ public class RedCloseAuto extends OpMode {
                 }
                 break;
             case 100: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
-                if (!waitingForLauncher) {
+                if (!robot.launcherThread.isBusy()) {
                     follower.followPath(toPickup1, true);
                     setPathState(2);
                 }
@@ -150,7 +150,7 @@ public class RedCloseAuto extends OpMode {
                 }
                 break;
             case 300: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
-                if (!waitingForLauncher) {
+                if (!robot.launcherThread.isBusy()) {
                     follower.followPath(toPickup2, true);
                     setPathState(4);
                 }
@@ -216,7 +216,7 @@ public class RedCloseAuto extends OpMode {
         robot.init();
         setOpModeIsActive(true);
 
-        robot.setAlliance(Config.Alliance.BLUE);
+        robot.setAlliance(Config.Alliance.RED);
 
         pathTimer = new Timer();
         opmodeTimer = new Timer();
@@ -249,11 +249,13 @@ public class RedCloseAuto extends OpMode {
     }
 
     /**
-     * We do not use this because everything should automatically disable
+     * Runs at the end of opMode life.
      **/
     @Override
     public void stop() {
+        robot.savePoseToFile(follower.getPose());
         setOpModeIsActive(false);
+
     }
 
     public void setOpModeIsActive(boolean value) {
@@ -265,10 +267,8 @@ public class RedCloseAuto extends OpMode {
     }
 
     private void launch() {
-        //robot.aimAssist.runAngleCorrection(2);
-        //robot.launcherThread.launch(3,true);
-        waitingForLauncher = true;
-
+        robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
+        robot.launcherThread.launchThree();
     }
 
 

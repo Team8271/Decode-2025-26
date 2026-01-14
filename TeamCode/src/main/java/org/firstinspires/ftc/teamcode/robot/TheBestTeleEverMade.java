@@ -12,7 +12,9 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 public class TheBestTeleEverMade extends LinearOpMode {
     Config robot;
     private Follower follower;
-    private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
+    //private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
+    private Pose startPose; // Start Pose of robot.
+
 
     // TODO: Limelight pose updating
     // TODO: Limelight correction but if no data switch to odometry
@@ -34,12 +36,17 @@ public class TheBestTeleEverMade extends LinearOpMode {
         follower.update();
 
         robot.init();
-        robot.setAlliance(Config.Alliance.RED);
-
+        robot.setAlliance(robot.readAllianceFromFile());
 
         //TODO: Not working, Seems Red/Blue flipped
         //resetPose(0, 0, robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180));
+
+        if(robot.readPoseFromFile() != null) {
+            startPose = robot.readPoseFromFile();
+        } else {startPose = new Pose();}
         resetPose(startPose.getX(), startPose.getY(), startPose.getHeading());
+
+        robot.invalidateSavedPose();
 
         telemetry.addData("Alliance", robot.alliance);
         telemetry.update();
@@ -75,7 +82,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
             if (resetFCD) {
                 double heading = robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180);
-                resetPose(0,0,heading);
+                resetPose(follower.getPose().getX(),follower.getPose().getY(),heading);
                 gamepad1.rumble(100);
                 log("FCD Reset");
             }
@@ -179,6 +186,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
             telemetry.update();
         }
+        robot.savePoseToFile(follower.getPose());
     }
 
     private void runSelector() {
@@ -186,15 +194,9 @@ public class TheBestTeleEverMade extends LinearOpMode {
         // Read last alliance from file
         robot.alliance = robot.readAllianceFromFile();
 
-        // Button state tracking for edge detection
-        boolean lastDpadDown = false;
-
         while (!isStarted() && !isStopRequested()) {
 
-            boolean dpadDown = gamepad1.dpad_down || gamepad2.dpad_down;
-            boolean dpadDownPressed = dpadDown && !lastDpadDown;
-
-            if (dpadDownPressed) {
+            if (gamepad1.dpadDownWasPressed()) {
 
                 switch (robot.alliance) {
                     case BLUE:
@@ -206,8 +208,6 @@ public class TheBestTeleEverMade extends LinearOpMode {
                 }
 
             }
-
-            lastDpadDown = dpadDown;
 
             telemetry.addData("Alliance", robot.alliance.toString());
             telemetry.addLine("\nPress START");

@@ -26,27 +26,30 @@ public class RedFarAuto extends OpMode {
 
     double parkTime = 25;
 
+    private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
+
 
     private int pathState;
 
-    private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
-    private final Pose scorePose = new Pose(94, 100, Math.toRadians(39)); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
-    private final Pose scorePose1 = new Pose(94,100, Math.toRadians(39));
-
-    private final Pose toPickup1Pose = new Pose(94, 84, Math.toRadians(360)); // Highest (First Set) of Artifacts from the Spike Mark.
-    private final Pose pickup1Pose = new Pose(126, 84, Math.toRadians(360)); // !!!!!
-
-    private final Pose toPickup2Pose = new Pose(94, 59, Math.toRadians(360)); // Middle (Second Set) of Artifacts from the Spike Mark.
-    private final Pose pickup2Pose = new Pose(133, 59, Math.toRadians(360)); // !!!!!
-
-    private final Pose exitGrabPickup2Pose = new Pose(94,63, Math.toRadians(360));
-
     private Path scorePreload;
-    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2, exitGrabPickup2;
+    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2, exitGrabPickup2,
+            scorePickup2;
 
-    private double pickupSpeed = 0.3;
+    private double pickupSpeed = 0.9;
 
     public void buildPaths() {
+
+        final Pose scorePose = new Pose(94, 100, robot.aimAssist.getHeadingForTarget(new Pose(94,100),robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
+        final Pose scorePosePark = new Pose(94, 120, robot.aimAssist.getHeadingForTarget(new Pose(94,110), robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
+
+        final Pose toPickup1Pose = new Pose(94, 84, Math.toRadians(360)); // Highest (First Set) of Artifacts from the Spike Mark.
+        final Pose pickup1Pose = new Pose(126, 84, Math.toRadians(360)); // !!!!!
+
+        final Pose toPickup2Pose = new Pose(94, 59, Math.toRadians(360)); // Middle (Second Set) of Artifacts from the Spike Mark.
+        final Pose pickup2Pose = new Pose(133, 59, Math.toRadians(360)); // !!!!!
+
+        final Pose exitGrabPickup2Pose = new Pose(94,63, Math.toRadians(360));
+
         /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
         scorePreload = new Path(new BezierLine(startPose, scorePose));
         scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
@@ -67,8 +70,8 @@ public class RedFarAuto extends OpMode {
 
         /* This is our scorePickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(toPickup1Pose, scorePose1))
-                .setLinearHeadingInterpolation(toPickup1Pose.getHeading(), scorePose1.getHeading())
+                .addPath(new BezierLine(toPickup1Pose, scorePose))
+                .setLinearHeadingInterpolation(toPickup1Pose.getHeading(), scorePose.getHeading())
                 .build();
 
         /* This is our grabPickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
@@ -87,16 +90,19 @@ public class RedFarAuto extends OpMode {
                 .setLinearHeadingInterpolation(pickup2Pose.getHeading(),exitGrabPickup2Pose.getHeading())
                 .build();
 
+        scorePickup2 = follower.pathBuilder()
+                .addPath(new BezierLine(exitGrabPickup2Pose, scorePosePark))
+                .setLinearHeadingInterpolation(exitGrabPickup2Pose.getHeading(), scorePosePark.getHeading())
+                .build();
+
     }
 
     public void autonomousPathUpdate() throws InterruptedException {
 
-        if (waitingForLauncher) {
-            if (!robot.launcherThread.isBusy()) {
-                waitingForLauncher = false;
-            } else {
-                return; // pause auton state machine, without blocking the thread
-            }
+        if (!robot.launcherThread.isBusy()) {
+            waitingForLauncher = false;
+        } else {
+            return; // pause auton state machine, without blocking the thread
         }
 
         switch (pathState) {
@@ -123,7 +129,8 @@ public class RedFarAuto extends OpMode {
                 }
                 break;
             case 100: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
-                if (!waitingForLauncher) {
+                if (!robot.launcherThread.isBusy()) {
+                    robot.runIntakeAssembly();
                     follower.followPath(toPickup1, true);
                     setPathState(2);
                 }
@@ -146,11 +153,13 @@ public class RedFarAuto extends OpMode {
             case 30:
                 if (!follower.isBusy()) {
                     launch();
+                    robot.runIntakeAssembly();
                     setPathState(300);
                 }
                 break;
             case 300: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
-                if (!waitingForLauncher) {
+                if (!robot.launcherThread.isBusy()) {
+                    robot.runIntakeAssembly();
                     follower.followPath(toPickup2, true);
                     setPathState(4);
                 }
@@ -160,17 +169,31 @@ public class RedFarAuto extends OpMode {
                 if (!follower.isBusy()) {
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
                     follower.followPath(grabPickup2, pickupSpeed, true);
-                    setPathState(401); // Pre parking
+                    setPathState(5); // Pre parking
                 }
                 break;
-            case 401:
+            case 5:
                 if(!follower.isBusy()) {
                     follower.followPath(exitGrabPickup2,true);
-                    robot.stopIntakeAssembly();
-                    robot.launcherMotor.setVelocity(0);
-                    setPathState(-1);
+                    setPathState(6);
                 }
                 break;
+            case 6:
+                if(!follower.isBusy()) {
+                    follower.followPath(scorePickup2,true);
+                    setPathState(60);
+                }
+                break;
+            case 60:
+                if(!follower.isBusy()) {
+                    launch();
+                    setPathState(601);
+                }
+            case 601:
+                if(!robot.launcherThread.isBusy()) {
+                    robot.stopIntakeAssembly();
+                    robot.launcherMotor.setVelocity(0);
+                }
 
         }
     }
@@ -216,7 +239,7 @@ public class RedFarAuto extends OpMode {
         robot.init();
         setOpModeIsActive(true);
 
-        robot.setAlliance(Config.Alliance.BLUE);
+        robot.setAlliance(Config.Alliance.RED);
 
         pathTimer = new Timer();
         opmodeTimer = new Timer();
@@ -226,6 +249,8 @@ public class RedFarAuto extends OpMode {
         follower = Constants.createFollower(hardwareMap);
         buildPaths();
         follower.setStartingPose(startPose);
+
+        robot.savePoseToFile(follower.getPose());
 
     }
 
@@ -249,11 +274,13 @@ public class RedFarAuto extends OpMode {
     }
 
     /**
-     * We do not use this because everything should automatically disable
+     * Runs at the end of opMode life.
      **/
     @Override
     public void stop() {
+        robot.savePoseToFile(follower.getPose());
         setOpModeIsActive(false);
+
     }
 
     public void setOpModeIsActive(boolean value) {
@@ -265,10 +292,8 @@ public class RedFarAuto extends OpMode {
     }
 
     private void launch() {
-        //robot.aimAssist.runAngleCorrection(2);
-        //robot.launcherThread.launch(3,true);
-        waitingForLauncher = true;
-
+        robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
+        robot.launcherThread.launchThree();
     }
 
 
