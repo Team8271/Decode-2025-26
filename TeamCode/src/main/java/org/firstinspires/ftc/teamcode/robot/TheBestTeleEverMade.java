@@ -45,8 +45,10 @@ public class TheBestTeleEverMade extends LinearOpMode {
             startPose = robot.readPoseFromFile();
         } else {startPose = new Pose();}
         resetPose(startPose.getX(), startPose.getY(), startPose.getHeading());
-
         robot.invalidateSavedPose();
+
+        // !! dev
+        resetPose(88, 12, Math.toRadians(90));
 
         telemetry.addData("Alliance", robot.alliance);
         telemetry.update();
@@ -56,6 +58,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
         while (opModeIsActive()) {
             follower.update();
+            telemetry.addData("Alliance", robot.alliance);
 
             // Driver 1 Controls
             double axialControl = -gamepad1.left_stick_y;  // y axis
@@ -65,9 +68,13 @@ public class TheBestTeleEverMade extends LinearOpMode {
             boolean resetFCD = gamepad1.dpad_up; // z axis reset
             boolean enableAimAssist = gamepad1.cross;
 
+            double allianceOffset = (robot.alliance == Config.Alliance.RED)
+                    ? 0.0
+                    : Math.PI;
+
             double gamepadRadians = Math.atan2(lateralControl, axialControl);
             double gamepadHypot = Range.clip(Math.hypot(lateralControl, axialControl), 0, 1);
-            double robotRadians = getHeading();
+            double robotRadians = getHeading() + allianceOffset;
             double targetRadians = gamepadRadians + robotRadians;
             double lateral = Math.sin(targetRadians)*gamepadHypot;
             double axial = Math.cos(targetRadians)*gamepadHypot;
