@@ -123,7 +123,6 @@ public class Config {
     /// Initialization Method
     public void init() {
         motif = Motif.NULL;
-        setAlliance(Alliance.BLUE);
         setAlliance(readAllianceFromFile());
         opModeIsActive = false;
 
