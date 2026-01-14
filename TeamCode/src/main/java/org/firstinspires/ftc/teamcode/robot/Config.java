@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -35,7 +36,7 @@ public class Config {
 
     // Changeable Power Values
     public final double
-            agitatorActivePower = 1, intakeMotorOnPower = 0.3, intakeMotorOffPower = 0;
+            agitatorActivePower = 1, intakeMotorOnVelocity = 500, intakeMotorOffVelocity = 0;
 
     private final double
             storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1 - storeLeftKickerPosition,
@@ -50,7 +51,7 @@ public class Config {
     public boolean devBool = false;
 
     // This value will be changed with Limelight sensing to get the ideal power
-    public double idealLauncherVelocity = 1900; // !! WARNING, VALUE USED IN AUTO... 0-2500 effective range
+    public double idealLauncherVelocity = 1900, idleLauncherVelocity = 900;
 
     private double  desiredLeftKickerPosition = storeLeftKickerPosition,
                     desiredIntakeLimiterPosition = intakeLimServerActivePosition;
@@ -123,6 +124,7 @@ public class Config {
     public void init() {
         motif = Motif.NULL;
         setAlliance(Alliance.BLUE);
+        setAlliance(readAllianceFromFile());
         opModeIsActive = false;
 
         // Shorten HardwareMap for frequent use
@@ -188,9 +190,11 @@ public class Config {
         launcherMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         launcherMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         launcherMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
+        launcherMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER,new PIDFCoefficients(130, 0,0,14.3));
 
         // Called 'org' in spirit
         intakeMotor = hwMap.get(DcMotorEx.class, "intake");
+        intakeMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         intakeMotor.setDirection(DcMotorEx.Direction.FORWARD);
 
         // Kicker Servo - Transfers artifacts from agitator to launcher
@@ -284,6 +288,7 @@ public class Config {
     public void setAlliance(Alliance alliance) {
         log("Team set to " + alliance);
         this.alliance = alliance;
+        saveAllianceToFile(alliance);
     }
 
     public void increaseLauncherVelocity() {
@@ -380,6 +385,79 @@ public class Config {
         }
     }
 
+    /**
+     * Reads a Pose from file.
+     * Returns null if the file does not exist or is invalid.
+     */
+    public Pose readPoseFromFile() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "pose.txt");
+
+            if (!file.exists()) {
+                log("Pose file not found");
+                return null;
+            }
+
+            String contents = ReadWriteFile.readFile(file).trim();
+            String[] parts = contents.split(",");
+
+            if (parts.length != 3) {
+                log("Invalid pose format");
+                return null;
+            }
+
+            double x = Double.parseDouble(parts[0]);
+            double y = Double.parseDouble(parts[1]);
+            double heading = Double.parseDouble(parts[2]);
+
+            Pose pose = new Pose(x, y, heading);
+            log("Pose read from file: " + pose);
+
+            return pose;
+
+        } catch (Exception e) {
+            log("Failed to read pose: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Saves a Pose to file.
+     */
+    public void savePoseToFile(Pose pose) {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "pose.txt");
+
+            String data = pose.getX() + "," +
+                    pose.getY() + "," +
+                    pose.getHeading();
+
+            ReadWriteFile.writeFile(file, data);
+            log("Pose saved: " + pose);
+
+        } catch (Exception e) {
+            log("Failed to save pose: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Clears the saved pose file.
+     */
+    public void invalidateSavedPose() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "pose.txt");
+
+            if (file.exists()) {
+                ReadWriteFile.writeFile(file, "");
+                log("Saved pose invalidated");
+            }
+
+        } catch (Exception e) {
+            log("Failed to invalidate pose: " + e.getMessage());
+        }
+    }
+
+
     public DriverAmount readDriverAmountFromFile() {
         try {
             File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
@@ -444,12 +522,12 @@ public class Config {
     }
 
     public void runIntakeAssembly() {
-        intakeMotor.setPower(intakeMotorOnPower);
+        intakeMotor.setVelocity(intakeMotorOnVelocity);
         agitator.setPower(agitatorActivePower);
     }
 
     public void stopIntakeAssembly() {
-        intakeMotor.setPower(intakeMotorOffPower);
+        intakeMotor.setVelocity(intakeMotorOffVelocity);
         agitator.setPower(0);
     }
 
@@ -472,7 +550,7 @@ public class Config {
     }
 
     public void reverseIntakeAssembly() {
-        intakeMotor.setPower(-intakeMotorOnPower);
+        intakeMotor.setVelocity(-intakeMotorOnVelocity);
         agitator.setPower(-agitatorActivePower);
     }
 
@@ -612,7 +690,7 @@ class LauncherThread extends Thread {
             double agitatorStartPower = robot.agitator.getPower();
 
             robot.agitator.setPower(robot.agitatorActivePower);
-            robot.intakeMotor.setPower(robot.intakeMotorOnPower);
+            robot.intakeMotor.setVelocity(robot.intakeMotorOnVelocity);
 
             //robot.aimAssist.runAngleCorrection(5);
             //robot.aimAssist.runPowerCalculation();
@@ -620,20 +698,23 @@ class LauncherThread extends Thread {
             updateLauncherVelocityAndWait();
             robot.deactivateIntakeLimiter();
             sleep(150);
+            log("Kicking with Vel of: " + robot.launcherMotor.getVelocity());
             robot.activateKicker();
             robot.waitForKicker();
             // Artifact One fully exited
             for (int i = 1; i < artifactsToLaunch; i++) {
                 robot.agitator.setPower(0);
-                robot.intakeMotor.setPower(-.1);
+                robot.intakeMotor.setVelocity(-.1);
                 robot.storeKicker();
                 robot.waitForKicker();
                 robot.agitator.setPower(robot.agitatorActivePower);
-                robot.intakeMotor.setPower(0.3);
+                robot.intakeMotor.setVelocity(0.3);
                 sleep(650); // Waiting for artifact to enter kicker
                 if(i==3){
                     sleep(200); // Additional wait for third artifact
                 }
+                updateLauncherVelocityAndWait();
+                log("Kicking with Vel of: " + robot.launcherMotor.getVelocity());
                 robot.activateKicker();
                 robot.waitForKicker();
             }
@@ -655,8 +736,8 @@ class LauncherThread extends Thread {
             sleep(1500);
         }
         robot.agitator.setPower(0);
-        robot.intakeMotor.setPower(0);
-        robot.launcherMotor.setPower(0);
+        robot.intakeMotor.setVelocity(0);
+        robot.launcherMotor.setVelocity(robot.idleLauncherVelocity);
         log("Launcher set to Idle");
     }
 
@@ -695,7 +776,7 @@ class LauncherThread extends Thread {
     private void doLaunchThree() throws InterruptedException {
 
         robot.agitator.setPower(robot.agitatorActivePower);
-        robot.intakeMotor.setPower(0.2);
+        robot.intakeMotor.setVelocity(robot.intakeMotorOnVelocity*.4);
 
         // !! Unstable: If idealVelocity changes -> may never reach
         // Launch motor ramp up.
