@@ -757,12 +757,9 @@ class LauncherThread extends Thread {
         }
     }
      /// Sets the Launcher to an Idle state using safe method of clearing kicker path.
-    private void idleLauncher() {
-        robot.agitator.setPower(-robot.agitatorActivePower);
+    public void idleLauncher() {
         robot.storeKicker();
         robot.activateIntakeLimiter();
-        robot.agitator.setPower(0);
-        robot.intakeMotor.setVelocity(0);
         robot.launcherMotor.setVelocity(robot.idleLauncherVelocity);
         log("Launcher set to Idle");
     }
