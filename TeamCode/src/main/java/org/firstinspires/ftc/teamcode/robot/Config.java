@@ -36,7 +36,8 @@ public class Config {
 
     // Changeable Power Values
     public final double
-            agitatorActivePower = 1, intakeMotorOnVelocity = 500, intakeMotorOffVelocity = 0;
+            agitatorActivePower = 1, intakeMotorOnVelocity = 500, intakeMotorOffVelocity = 0,
+            overrideLauncherVel = 1300;
 
     private final double
             storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1 - storeLeftKickerPosition,
@@ -983,6 +984,7 @@ class AimAssist {
     private final double minWheelPower = 0.1; // Smallest amount of power that still moves wheels
     private double correctionPower = 0.3;
     private double scaleFactor = 0.05;
+    private boolean simpleMode = false;
 
     GoalResults goalAngles = new GoalResults();
 
@@ -994,6 +996,27 @@ class AimAssist {
         private final Pose pose;
         Poses(Pose pose) {this.pose = pose;}
         public Pose getValue() {return pose;}
+    }
+
+    /**
+     * @return true if active
+     */
+    public boolean getSimpleStatus() {
+        return simpleMode;
+    }
+
+    /**
+     * Enables simple mode for all AimAssist methods.
+     */
+    public void enableSimpleMode() {
+        simpleMode = true;
+    }
+
+    /**
+     * Disable simple mode for all AimAssist methods.
+     */
+    public void disableSimpleMode() {
+        simpleMode = false;
     }
 
     public Pose getNearestPose(Pose currentPose) {
@@ -1038,12 +1061,19 @@ class AimAssist {
     }
 
     /**
-     * Calculates desired heading to face a position on a pedro-field.
+     * Calculates desired heading to face a position on a pedro-field. <break></break>
+     * <b>Simple Mode:</b> returns BLUE=135deg  RED=35deg (In Radians)
      * @param currentPose Robot current position on the field <b>(must be correct)</b>
      * @param targetToFace Pose of the desired position to be facing
      * @return The correct heading in radians to face the target Pose
+     * @SimpleMode returns BLUE=135deg  RED=35deg (In Radians)
      */
     public double getHeadingForTarget(Pose currentPose, Pose targetToFace) {
+
+        if (simpleMode) {
+            return (robot.alliance == Config.Alliance.RED ? 35 : 135);
+        }
+
         // Robot's current state
         double robotX = currentPose.getX();
         double robotY = currentPose.getY();
@@ -1150,8 +1180,13 @@ class AimAssist {
      * using odometry and camera positioning.
      *
      * @return the ideal launcher velocity for current position
+     * @SimpleMode returns robot.overrideLauncherVel
      */
     public double runPowerCalculation(Pose currentPose, Pose targetPose) {
+
+        if(simpleMode) {
+            return robot.overrideLauncherVel;
+        }
 
         // Distance from target represented as x
         double x = robot.aimAssist.getPoseDistance(currentPose, targetPose);
