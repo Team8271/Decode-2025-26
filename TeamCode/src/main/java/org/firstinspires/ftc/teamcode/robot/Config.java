@@ -524,6 +524,10 @@ public class Config {
         intakeMotor.setVelocity(intakeMotorOnVelocity);
         agitator.setPower(agitatorActivePower);
     }
+    public void runIntakeAssembly(double vel) {
+        intakeMotor.setVelocity(vel);
+        agitator.setPower(agitatorActivePower);
+    }
 
     public void stopIntakeAssembly() {
         intakeMotor.setVelocity(intakeMotorOffVelocity);
