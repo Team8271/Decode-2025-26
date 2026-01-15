@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.robot; // make sure this aligns with class location
 
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
@@ -24,7 +25,7 @@ public class RedFarAuto extends OpMode {
     private Follower follower;
     private Timer pathTimer, actionTimer, opmodeTimer;
 
-    double parkTime = 25;
+    //double parkTime = 25;
 
     private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
 
@@ -32,32 +33,32 @@ public class RedFarAuto extends OpMode {
     private int pathState;
 
     private Path scorePreload;
-    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2, exitGrabPickup2,
-            scorePickup2;
+    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2,
+            scorePickup2, toPickup3, grabPickup3, scorePickup3;
 
-    private double pickupSpeed = 0.9;
+    private double pickupSpeed = 0.8;
+    private double intakeHighVel = 2000;
 
     public void buildPaths() {
 
         final Pose scorePose = new Pose(94, 100, robot.aimAssist.getHeadingForTarget(new Pose(94,100),robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
-        final Pose scorePosePark = new Pose(94, 120, robot.aimAssist.getHeadingForTarget(new Pose(94,110), robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
+        final Pose scorePosePark = new Pose(94, 110, robot.aimAssist.getHeadingForTarget(new Pose(94,110), robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
 
         final Pose toPickup1Pose = new Pose(94, 84, Math.toRadians(360)); // Highest (First Set) of Artifacts from the Spike Mark.
         final Pose pickup1Pose = new Pose(126, 84, Math.toRadians(360)); // !!!!!
 
         final Pose toPickup2Pose = new Pose(94, 59, Math.toRadians(360)); // Middle (Second Set) of Artifacts from the Spike Mark.
         final Pose pickup2Pose = new Pose(133, 59, Math.toRadians(360)); // !!!!!
-
         final Pose exitGrabPickup2Pose = new Pose(94,63, Math.toRadians(360));
+
+        final Pose toPickup3Pose = new Pose(94, 34, Math.toRadians(360)); // Middle (Second Set) of Artifacts from the Spike Mark.
+        final Pose pickup3Pose = new Pose(133, 34, Math.toRadians(360)); // !!!!!
+        final Pose exitGrabPickup3Pose = new Pose(94,38, Math.toRadians(360));
 
         /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
         scorePreload = new Path(new BezierLine(startPose, scorePose));
         scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
 
-    /* Here is an example for Constant Interpolation
-    scorePreload.setConstantInterpolation(startPose.getHeading()); */
-
-        /* This is our grabPickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         toPickup1 = follower.pathBuilder()
                 .addPath(new BezierLine(scorePose, toPickup1Pose))
                 .setLinearHeadingInterpolation(scorePose.getHeading(), toPickup1Pose.getHeading())
@@ -68,10 +69,9 @@ public class RedFarAuto extends OpMode {
                 .setLinearHeadingInterpolation(toPickup1Pose.getHeading(), pickup1Pose.getHeading())
                 .build();
 
-        /* This is our scorePickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(toPickup1Pose, scorePose))
-                .setLinearHeadingInterpolation(toPickup1Pose.getHeading(), scorePose.getHeading())
+                .addPath(new BezierLine(pickup1Pose, scorePose))
+                .setLinearHeadingInterpolation(pickup1Pose.getHeading(), scorePose.getHeading())
                 .build();
 
         /* This is our grabPickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
@@ -85,14 +85,24 @@ public class RedFarAuto extends OpMode {
                 .setLinearHeadingInterpolation(toPickup2Pose.getHeading(), pickup2Pose.getHeading())
                 .build();
 
-        exitGrabPickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup2Pose, exitGrabPickup2Pose))
-                .setLinearHeadingInterpolation(pickup2Pose.getHeading(),exitGrabPickup2Pose.getHeading())
+        scorePickup2 = follower.pathBuilder()
+                .addPath(new BezierCurve(pickup2Pose, exitGrabPickup2Pose, scorePose))
+                .setLinearHeadingInterpolation(exitGrabPickup2Pose.getHeading(), scorePose.getHeading())
                 .build();
 
-        scorePickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(exitGrabPickup2Pose, scorePosePark))
-                .setLinearHeadingInterpolation(exitGrabPickup2Pose.getHeading(), scorePosePark.getHeading())
+        toPickup3 = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose, toPickup3Pose))
+                .setLinearHeadingInterpolation(scorePose.getHeading(), toPickup3Pose.getHeading())
+                .build();
+
+        grabPickup3 = follower.pathBuilder()
+                .addPath(new BezierLine(toPickup3Pose, pickup3Pose))
+                .setLinearHeadingInterpolation(toPickup3Pose.getHeading(), pickup3Pose.getHeading())
+                .build();
+
+        scorePickup3 = follower.pathBuilder()
+                .addPath(new BezierCurve(pickup3Pose, exitGrabPickup3Pose, scorePosePark))
+                .setLinearHeadingInterpolation(exitGrabPickup3Pose.getHeading(), scorePosePark.getHeading())
                 .build();
 
     }
@@ -107,9 +117,8 @@ public class RedFarAuto extends OpMode {
 
         switch (pathState) {
             case 0:
-                robot.launcherMotor.setVelocity(robot.idealLauncherVelocity); // Start spinning wheel
+                robot.launcherThread.idleLauncher();
                 follower.followPath(scorePreload);
-                robot.runIntakeAssembly();
                 setPathState(1);
                 break;
             case 1:
@@ -123,14 +132,12 @@ public class RedFarAuto extends OpMode {
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
                 if (!follower.isBusy()) {
                     /* Score Preload */
-                    robot.runIntakeAssembly();
                     launch();
                     setPathState(100);
                 }
                 break;
             case 100: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
                 if (!robot.launcherThread.isBusy()) {
-                    robot.runIntakeAssembly();
                     follower.followPath(toPickup1, true);
                     setPathState(2);
                 }
@@ -138,6 +145,7 @@ public class RedFarAuto extends OpMode {
             case 2:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
                 if (!follower.isBusy()) {
+                    robot.runIntakeAssembly(intakeHighVel);
                     follower.followPath(grabPickup1, pickupSpeed, true);
                     setPathState(3);
                 }
@@ -145,7 +153,7 @@ public class RedFarAuto extends OpMode {
             case 3:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
                 if (!follower.isBusy()) {
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
+                    robot.stopIntakeAssembly();
                     follower.followPath(scorePickup1, 0.8, true);
                     setPathState(30);
                 }
@@ -153,13 +161,11 @@ public class RedFarAuto extends OpMode {
             case 30:
                 if (!follower.isBusy()) {
                     launch();
-                    robot.runIntakeAssembly();
                     setPathState(300);
                 }
                 break;
             case 300: // WAITING FOR LAUNCHER TO FINISH BEFORE MOVING
                 if (!robot.launcherThread.isBusy()) {
-                    robot.runIntakeAssembly();
                     follower.followPath(toPickup2, true);
                     setPathState(4);
                 }
@@ -167,33 +173,64 @@ public class RedFarAuto extends OpMode {
             case 4:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
                 if (!follower.isBusy()) {
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
+                    robot.runIntakeAssembly(intakeHighVel);
                     follower.followPath(grabPickup2, pickupSpeed, true);
                     setPathState(5); // Pre parking
                 }
                 break;
             case 5:
                 if(!follower.isBusy()) {
-                    follower.followPath(exitGrabPickup2,true);
+                    robot.stopIntakeAssembly();
+                    follower.followPath(scorePickup2,true);
+                    setPathState(50);
+                }
+                break;
+            case 50:
+                if(!follower.isBusy()) {
+                    launch();
+                    setPathState(500);
+                }
+                break;
+            case 500:
+                if(!robot.launcherThread.isBusy()) {
+                    follower.followPath(toPickup3, true);
                     setPathState(6);
                 }
                 break;
             case 6:
                 if(!follower.isBusy()) {
-                    follower.followPath(scorePickup2,true);
-                    setPathState(60);
+                    robot.runIntakeAssembly(intakeHighVel);
+                    follower.followPath(grabPickup3, pickupSpeed, true);
+                    setPathState(7);
                 }
                 break;
-            case 60:
+            case 7:
+                if(!follower.isBusy()) {
+                    robot.stopIntakeAssembly();
+                    follower.followPath(scorePickup3);
+                    setPathState(70);
+                }
+                break;
+            case 70:
+                if(!follower.isBusy()) {
+                    follower.followPath(scorePickup3, true);
+                    setPathState(700);
+                }
+                break;
+            case 700:
                 if(!follower.isBusy()) {
                     launch();
-                    setPathState(601);
+                    setPathState(701);
                 }
-            case 601:
+                break;
+            case 701:
                 if(!robot.launcherThread.isBusy()) {
                     robot.stopIntakeAssembly();
                     robot.launcherMotor.setVelocity(0);
+                    setPathState(-2);
                 }
+                break;
+
 
         }
     }
@@ -235,7 +272,7 @@ public class RedFarAuto extends OpMode {
     @Override
     public void init() {
 
-        robot = new Config(null, this);
+        robot = new Config(this,follower);
         robot.init();
         setOpModeIsActive(true);
 

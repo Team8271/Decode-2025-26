@@ -1,13 +1,14 @@
 package org.firstinspires.ftc.teamcode.robot; // make sure this aligns with class location
 
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -24,39 +25,40 @@ public class BlueCloseAuto extends OpMode {
     private Follower follower;
     private Timer pathTimer, actionTimer, opmodeTimer;
 
-    double parkTime = 25;
+    //double parkTime = 25;
+
+    private final Pose startPose = new Pose(22.49, 121.03, Math.toRadians(141.10)); // Start Pose of robot.
 
 
     private int pathState;
 
-    private final Pose startPose = new Pose(27, 132, Math.toRadians(144)); // Start Pose of robot.
-    private final Pose scorePose = new Pose(50, 100, Math.toRadians(144)); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
-    private final Pose scorePose1 = new Pose(50, 100, Math.toRadians(135)); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
-
-    private final Pose toPickup1Pose = new Pose(50, 86, Math.toRadians(180));// Highest (First Set) of Artifacts from the Spike Mark.
-    private final Pose pickup1Pose = new Pose(18, 86, Math.toRadians(180));
-
-    private final Pose toPickup2Pose = new Pose(50, 63, Math.toRadians(180)); // Middle (Second Set) of Artifacts from the Spike Mark.
-    private final Pose pickup2Pose = new Pose(14, 63, Math.toRadians(180));
-
-    private final Pose exitGrabPickup2Pose = new Pose(20,63,Math.toRadians(180));
-
-    private final Pose parkPose = new Pose(50,115, Math.toRadians(144));
-
     private Path scorePreload;
-    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2, exitGrabPickup2;
+    private PathChain toPickup1, grabPickup1, scorePickup1, toPickup2, grabPickup2,
+            scorePickup2, toPickup3, grabPickup3, scorePickup3;
 
-    private double pickupSpeed = 0.3;
+    private double pickupSpeed = 0.8;
+    private double intakeHighVel = 2000;
 
     public void buildPaths() {
+
+        final Pose scorePose = new Pose(50, 100, robot.aimAssist.getHeadingForTarget(new Pose(50,100), robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
+        final Pose scorePosePark = new Pose(53, 115, robot.aimAssist.getHeadingForTarget(new Pose(53,115), robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
+
+        final Pose toPickup1Pose = new Pose(50, 84, Math.toRadians(180)); // Highest (First Set) of Artifacts from the Spike Mark.
+        final Pose pickup1Pose = new Pose(19, 84, Math.toRadians(180)); // !!!!!
+
+        final Pose toPickup2Pose = new Pose(50, 61, Math.toRadians(180)); // Middle (Second Set) of Artifacts from the Spike Mark.
+        final Pose pickup2Pose = new Pose(12, 61, Math.toRadians(180)); // !!!!!
+        final Pose exitGrabPickup2Pose = new Pose(50, 63, Math.toRadians(180));
+
+        final Pose toPickup3Pose = new Pose(50, 37, Math.toRadians(180)); // Middle (Second Set) of Artifacts from the Spike Mark.
+        final Pose pickup3Pose = new Pose(12, 37, Math.toRadians(180)); // !!!!!
+        final Pose exitGrabPickup3Pose = new Pose(50, 38, Math.toRadians(180));
+
         /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
         scorePreload = new Path(new BezierLine(startPose, scorePose));
         scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
 
-    /* Here is an example for Constant Interpolation
-    scorePreload.setConstantInterpolation(startPose.getHeading()); */
-
-        /* This is our grabPickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         toPickup1 = follower.pathBuilder()
                 .addPath(new BezierLine(scorePose, toPickup1Pose))
                 .setLinearHeadingInterpolation(scorePose.getHeading(), toPickup1Pose.getHeading())
@@ -67,10 +69,9 @@ public class BlueCloseAuto extends OpMode {
                 .setLinearHeadingInterpolation(toPickup1Pose.getHeading(), pickup1Pose.getHeading())
                 .build();
 
-        /* This is our scorePickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
         scorePickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(toPickup1Pose, scorePose1))
-                .setLinearHeadingInterpolation(toPickup1Pose.getHeading(), scorePose1.getHeading())
+                .addPath(new BezierLine(pickup1Pose, scorePose))
+                .setLinearHeadingInterpolation(pickup1Pose.getHeading(), scorePose.getHeading())
                 .build();
 
         /* This is our grabPickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
@@ -84,28 +85,40 @@ public class BlueCloseAuto extends OpMode {
                 .setLinearHeadingInterpolation(toPickup2Pose.getHeading(), pickup2Pose.getHeading())
                 .build();
 
-        exitGrabPickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup2Pose, exitGrabPickup2Pose))
-                .setLinearHeadingInterpolation(pickup2Pose.getHeading(),exitGrabPickup2Pose.getHeading())
+        scorePickup2 = follower.pathBuilder()
+                .addPath(new BezierCurve(pickup2Pose, exitGrabPickup2Pose, scorePose))
+                .setLinearHeadingInterpolation(exitGrabPickup2Pose.getHeading(), scorePose.getHeading())
+                .build();
+
+        toPickup3 = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose, toPickup3Pose))
+                .setLinearHeadingInterpolation(scorePose.getHeading(), toPickup3Pose.getHeading())
+                .build();
+
+        grabPickup3 = follower.pathBuilder()
+                .addPath(new BezierLine(toPickup3Pose, pickup3Pose))
+                .setLinearHeadingInterpolation(toPickup3Pose.getHeading(), pickup3Pose.getHeading())
+                .build();
+
+        scorePickup3 = follower.pathBuilder()
+                .addPath(new BezierCurve(pickup3Pose, exitGrabPickup3Pose, scorePosePark))
+                .setLinearHeadingInterpolation(exitGrabPickup3Pose.getHeading(), scorePosePark.getHeading())
                 .build();
 
     }
 
     public void autonomousPathUpdate() throws InterruptedException {
 
-        if (waitingForLauncher) {
-            if (!robot.launcherThread.isBusy()) {
-                waitingForLauncher = false;
-            } else {
-                return; // pause auton state machine, without blocking the thread
-            }
+        if (!robot.launcherThread.isBusy()) {
+            waitingForLauncher = false;
+        } else {
+            return; // pause auton state machine, without blocking the thread
         }
 
         switch (pathState) {
             case 0:
-                robot.launcherMotor.setVelocity(robot.idealLauncherVelocity); // Start spinning wheel
+                robot.launcherThread.idleLauncher();
                 follower.followPath(scorePreload);
-                robot.runIntakeAssembly();
                 setPathState(1);
                 break;
             case 1:
@@ -119,7 +132,6 @@ public class BlueCloseAuto extends OpMode {
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
                 if (!follower.isBusy()) {
                     /* Score Preload */
-                    robot.runIntakeAssembly();
                     launch();
                     setPathState(100);
                 }
@@ -133,6 +145,7 @@ public class BlueCloseAuto extends OpMode {
             case 2:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
                 if (!follower.isBusy()) {
+                    robot.runIntakeAssembly(intakeHighVel);
                     follower.followPath(grabPickup1, pickupSpeed, true);
                     setPathState(3);
                 }
@@ -140,7 +153,7 @@ public class BlueCloseAuto extends OpMode {
             case 3:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
                 if (!follower.isBusy()) {
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
+                    robot.stopIntakeAssembly();
                     follower.followPath(scorePickup1, 0.8, true);
                     setPathState(30);
                 }
@@ -160,19 +173,65 @@ public class BlueCloseAuto extends OpMode {
             case 4:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
                 if (!follower.isBusy()) {
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
+                    robot.runIntakeAssembly(intakeHighVel);
                     follower.followPath(grabPickup2, pickupSpeed, true);
-                    setPathState(401); // Pre parking
+                    setPathState(5); // Pre parking
                 }
                 break;
-            case 401:
+            case 5:
                 if(!follower.isBusy()) {
-                    follower.followPath(exitGrabPickup2,true);
+                    robot.stopIntakeAssembly();
+                    follower.followPath(scorePickup2,true);
+                    setPathState(50);
+                }
+                break;
+            case 50:
+                if(!follower.isBusy()) {
+                    launch();
+                    setPathState(500);
+                }
+                break;
+            case 500:
+                if(!robot.launcherThread.isBusy()) {
+                    follower.followPath(toPickup3, true);
+                    setPathState(6);
+                }
+                break;
+            case 6:
+                if(!follower.isBusy()) {
+                    robot.runIntakeAssembly(intakeHighVel);
+                    follower.followPath(grabPickup3, pickupSpeed, true);
+                    setPathState(7);
+                }
+                break;
+            case 7:
+                if(!follower.isBusy()) {
+                    robot.stopIntakeAssembly();
+                    follower.followPath(scorePickup3);
+                    setPathState(70);
+                }
+                break;
+            case 70:
+                if(!follower.isBusy()) {
+                    follower.followPath(scorePickup3, true);
+                    setPathState(700);
+                }
+                break;
+            case 700:
+                if(!follower.isBusy()) {
+                    launch();
+                    setPathState(701);
+                }
+                break;
+            case 701:
+                if(!robot.launcherThread.isBusy()) {
                     robot.stopIntakeAssembly();
                     robot.launcherMotor.setVelocity(0);
-                    setPathState(-1);
+                    setPathState(-2);
                 }
                 break;
+
+
         }
     }
 
@@ -213,7 +272,7 @@ public class BlueCloseAuto extends OpMode {
     @Override
     public void init() {
 
-        robot = new Config(null,this);
+        robot = new Config(this, follower);
         robot.init();
         setOpModeIsActive(true);
 
@@ -227,6 +286,8 @@ public class BlueCloseAuto extends OpMode {
         follower = Constants.createFollower(hardwareMap);
         buildPaths();
         follower.setStartingPose(startPose);
+
+        robot.savePoseToFile(follower.getPose());
 
     }
 
@@ -264,7 +325,7 @@ public class BlueCloseAuto extends OpMode {
     }
 
     private void log(String message) {
-        robot.log("[BlueCloseAuto] - " + message);
+        robot.log("[RedFarAuto] - " + message);
     }
 
     private void launch() {
