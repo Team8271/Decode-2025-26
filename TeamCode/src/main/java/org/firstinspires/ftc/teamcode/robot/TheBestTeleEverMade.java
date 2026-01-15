@@ -48,7 +48,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
         robot.invalidateSavedPose();
 
         // !! dev
-        resetPose(88, 12, Math.toRadians(90));
+        resetPose(56, 12, Math.toRadians(90)); // Blue far start
 
         telemetry.addData("Alliance", robot.alliance);
         telemetry.update();
