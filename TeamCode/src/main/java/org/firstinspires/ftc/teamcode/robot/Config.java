@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.robot;
 
 import android.util.Log;
 
+import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
@@ -115,15 +116,29 @@ public class Config {
     public Mecanum mecanum;
     public TweetyBird tweetyBird;
 
-    // Pass opMode to config
-    public Config(LinearOpMode linearOpMode) {
+    // Follower
+    Follower follower;
+
+    private Config(LinearOpMode linearOpMode, OpMode opMode, Follower follower) {
         this.linearOpMode = linearOpMode;
-        opMode = null;
+        this.opMode = opMode;
+        this.follower = follower;
+    }
+
+    public Config(LinearOpMode linearOpMode) {
+        this(linearOpMode,null,null);
+    }
+
+    public Config(LinearOpMode linearOpMode, Follower follower) {
+        this(linearOpMode,null,follower);
     }
 
     public Config(OpMode opMode) {
-        this.opMode = opMode;
-        linearOpMode = null;
+        this(null,opMode,null);
+    }
+
+    public Config(OpMode opMode, Follower follower) {
+        this(null,opMode,follower);
     }
 
     /// Initialization Method
