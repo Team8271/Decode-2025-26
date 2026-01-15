@@ -116,9 +116,14 @@ public class Config {
     public TweetyBird tweetyBird;
 
     // Pass opMode to config
-    public Config(LinearOpMode linearOpMode, OpMode opMode) {
+    public Config(LinearOpMode linearOpMode) {
         this.linearOpMode = linearOpMode;
+        opMode = null;
+    }
+
+    public Config(OpMode opMode) {
         this.opMode = opMode;
+        linearOpMode = null;
     }
 
     /// Initialization Method
