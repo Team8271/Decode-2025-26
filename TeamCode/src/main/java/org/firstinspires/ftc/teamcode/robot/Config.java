@@ -749,33 +749,22 @@ class LauncherThread extends Thread {
             }
 
             // Go to IDLE mode
-            idleLauncher(true);
+            idleLauncher();
 
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
     }
-
-    private void idleLauncher(boolean force) throws InterruptedException {
+     /// Sets the Launcher to an Idle state using safe method of clearing kicker path.
+    private void idleLauncher() {
         robot.agitator.setPower(-robot.agitatorActivePower);
         robot.storeKicker();
         robot.activateIntakeLimiter();
-        if(!force){
-            sleep(1500);
-        }
         robot.agitator.setPower(0);
         robot.intakeMotor.setVelocity(0);
         robot.launcherMotor.setVelocity(robot.idleLauncherVelocity);
         log("Launcher set to Idle");
-    }
-
-    /**
-     * Sets the Launcher to an Idle state using safe method of clearing kicker path.
-     * @throws InterruptedException if interrupted while waiting for artifacts to exit kicker path.
-     */
-    private void idleLauncher() throws InterruptedException {
-        idleLauncher(false);
     }
 
     public void cancelLaunch() {
@@ -783,17 +772,8 @@ class LauncherThread extends Thread {
             log("Cancel: Interrupting launcher");
             robot.launcherThread.interrupt();
             log("Cancel: Idling Launcher");
-            try {
-                idleLauncher();
-            } catch (InterruptedException e) {
-                log("Cancel: Failed to Safe Idle Launcher, Force Idling Launcher");
-                try {
-                    idleLauncher(true);
-                } catch (InterruptedException ex) {
-                    log("Cancel: Failed to Force Idle Launcher");
-                }
+            idleLauncher();
 
-            }
         }
 
     }
