@@ -708,14 +708,14 @@ class LauncherThread extends Thread {
             // Artifact One fully exited
             for (int i = 1; i < artifactsToLaunch; i++) {
                 robot.agitator.setPower(0);
-                robot.intakeMotor.setVelocity(-.1);
+                //robot.intakeMotor.setVelocity(); // designed for power not vel
                 robot.storeKicker();
                 robot.waitForKicker();
                 robot.agitator.setPower(robot.agitatorActivePower);
-                robot.intakeMotor.setVelocity(0.3);
-                sleep(650); // Waiting for artifact to enter kicker
+                robot.intakeMotor.setVelocity(200);
+                sleep(350); // Waiting for artifact to enter kicker
                 if(i==3){
-                    sleep(200); // Additional wait for third artifact
+                    sleep(250); // Additional wait for third artifact
                 }
                 updateLauncherVelocityAndWait();
                 log("Kicking with Vel of: " + robot.launcherMotor.getVelocity());
