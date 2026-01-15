@@ -723,7 +723,7 @@ class LauncherThread extends Thread {
             }
 
             // Go to IDLE mode
-            idleLauncher();
+            idleLauncher(true);
 
         }
         catch (InterruptedException e) {
