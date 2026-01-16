@@ -171,6 +171,15 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
             }
 
+            if (robot.intakeMotor.getVelocity() < robot.intakeMotorOnVelocity-50) {
+                robot.indicatorLight.setPosition(robot.indicatorLightOn);
+            }
+            else {
+                robot.indicatorLight.setPosition(robot.indicatorLightOff);
+            }
+
+
+
             if(changeAlliance) {
                 switch(robot.alliance) {
                     case RED:
