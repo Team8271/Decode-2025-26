@@ -45,7 +45,7 @@ public class Config {
             activeLeftKickerPosition = 0, activeRightKickerPosition = 1 - activeLeftKickerPosition,
             intakeLimServerActivePosition = 1, intakeLimServoInactivePosition = 0.5;
 
-    public final double indicatorLightOn = 0.722, indicatorLightOff = 0,
+    public final double indicatorLightOn = 0.3, indicatorLightOff = 0,
                         indicatorLightReverse = 0.555;
 
     public final int motorRampUpTime = 3000;
