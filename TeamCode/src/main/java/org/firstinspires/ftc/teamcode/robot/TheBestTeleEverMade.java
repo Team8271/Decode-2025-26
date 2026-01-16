@@ -30,7 +30,8 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        robot = new Config(null, this);
+        robot = new Config(this);
+
 
         follower = Constants.createFollower(hardwareMap);
         follower.update();
@@ -123,7 +124,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
             boolean intakeAssemblyToggle = gamepad2.bWasPressed();
             boolean reverseIntakeAssemblyToggle = gamepad2.xWasPressed();
             boolean changeAlliance = gamepad2.optionsWasPressed();
-            boolean cancelLaunch = gamepad2.dpadLeftWasPressed();
+            //boolean cancelLaunch = gamepad2.dpadLeftWasPressed();
             boolean aimAssistOverrideToggle = gamepad2.dpadRightWasPressed();
 
             if(aimAssistOverrideToggle) {
@@ -135,10 +136,10 @@ public class TheBestTeleEverMade extends LinearOpMode {
                 }
             }
 
-            if(cancelLaunch) {
-                log("Canceling launch");
-                robot.launcherThread.cancelLaunch();
-            }
+            //if(cancelLaunch) {
+            //    log("Canceling launch");
+            //    robot.launcherThread.cancelLaunch();
+            //}
 
             if (launchOneArtifact) {
                 robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
