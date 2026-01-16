@@ -61,7 +61,7 @@ public class FlywheelPFTuner extends OpMode {
     @Override
     public void init() {
 
-        robot = new Config(null, this);
+        robot = new Config(this);
         robot.aimAssistInit();
         robot.alliance = Config.Alliance.RED;
 
