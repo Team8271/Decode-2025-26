@@ -231,7 +231,8 @@ public class Config {
         indicatorLight.setPosition(indicatorLightOn);
 
         // Launcher Multithreading
-        launcherThread = new LauncherThread(this,follower);
+        launcherThread = new LauncherThread();
+        launcherThread.setConfig(this);
 
         limelight = new Limelight(this);
 
@@ -600,21 +601,16 @@ public class Config {
  */
 class LauncherThread extends Thread {
     Config robot;
-    Follower follower;
-
-    public LauncherThread(Config robot, Follower follower) {
-        this.robot = robot;
-        this.follower = follower;
-    }
+    public void setConfig(Config robot) {this.robot = robot;}
 
     private volatile boolean launchThree = false;
     private volatile boolean isBusy = false;
+    private volatile double targetLauncherVelocity = 1300;
 
     private volatile boolean running = true; // When false, thread terminates
 
     @Override
     public void run() {
-        if(follower == null) {robot.aimAssist.enableSimpleMode();}
         while (running) {
             synchronized (this) {
                 try {
@@ -690,21 +686,20 @@ class LauncherThread extends Thread {
         log("Launcher velocity reached: " + curVelocity + " (target: " + velocity + ")");
     }
 
-    /**
-     * Does nothing
-     * @deprecated launcher thread now handles velocity calculations given follower on init
-     */
-    public void setLauncherVelocity(double velocity) {}
+    public void setLauncherVelocity(double velocity) {
+        targetLauncherVelocity = velocity;
+    }
 
     public double getLauncherVelocity() {
-        return robot.launcherMotor.getVelocity();
+        return targetLauncherVelocity;
     }
 
     /**
-     * Sets launch motor to aimAssist calculated velocity and waits for velocity to match.
+     * Sets launch motor to targetLauncherVelocity and waits for velocity to match.
+     * @implNote Use <I>aimAssist.setLauncherVelocity()</I> in an opMode to change this velocity.
      */
     private void updateLauncherVelocityAndWait() {
-        double velocity = robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose());
+        double velocity = targetLauncherVelocity; // Prevent race condition
         robot.launcherMotor.setVelocity(velocity);
         log("Launcher now running at '" + velocity + "' vel.");
         try {
