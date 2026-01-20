@@ -2,17 +2,17 @@ package org.firstinspires.ftc.teamcode.robot;
 
 import android.util.Log;
 
+import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
@@ -26,7 +26,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 
 import dev.narlyx.tweetybird.Drivers.Mecanum;
@@ -38,18 +37,26 @@ public class Config {
 
     // Changeable Power Values
     public final double
-        agitatorActivePower = 1, intakeServoOnPower = 1, intakeServerOffPower = 0.5;
+            agitatorActivePower = 1, intakeMotorOnVelocity = 750, intakeMotorOffVelocity = 0,
+            overrideLauncherVel = 1225;
 
     private final double
-        storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1-storeLeftKickerPosition,
-        activeLeftKickerPosition = 0, activeRightKickerPosition = 1-activeLeftKickerPosition;
+            storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1 - storeLeftKickerPosition,
+            activeLeftKickerPosition = 0, activeRightKickerPosition = 1 - activeLeftKickerPosition,
+            intakeLimServerActivePosition = 1, intakeLimServoInactivePosition = 0.5;
+
+    public final double indicatorLightOn = 0.3, indicatorLightOff = 0,
+                        indicatorLightReverse = 0.555, indicatorLightOffBog = 0.444;
 
     public final int motorRampUpTime = 3000;
 
+    public boolean devBool = false;
+
     // This value will be changed with Limelight sensing to get the ideal power
-    /// @deprecated in favor of launcher velocity
-    public double idealLauncherPower = 1;
-    public double idealLauncherVelocity = 1900; // !! WARNING, VALUE USED IN AUTO... 0-2500 effective range
+    public double idealLauncherVelocity = 1225, idleLauncherVelocity = 900;
+
+    private double  desiredLeftKickerPosition = storeLeftKickerPosition,
+                    desiredIntakeLimiterPosition = intakeLimServerActivePosition;
 
     // Reference to opMode class
     public final LinearOpMode linearOpMode;
@@ -61,31 +68,20 @@ public class Config {
 
     // Define Motors
     public DcMotorEx fl, fr, bl, br,
-            agitator, launcherMotor;
+            agitator, launcherMotor, intakeMotor;
 
     // Define Servos
-    private Servo leftKickerServo, rightKickerServo;
-    public Servo intakeServo;
+    private Servo leftKickerServo, rightKickerServo, intakeLimServo;
+    public Servo indicatorLight;
 
     // Other Hardware
-    public Limelight3A limelight;
-    public IMU imu;
-
-    // Variables
-    public final int   limelightLocalizationPipeline   = 0,
-                        limelightObeliskPipeline        = 1,
-                        limelightRedPipeline            = 2,
-                        limelightBluePipeline           = 3;
-
-    public boolean goalAnglesAreValid;
-    public double goalTx;
-    public double goalTy;
-    public double goalAvgDist;
+    public Limelight3A limelightCamera;
+    //public IMU imu;
 
     public Motif motif;
 
     public LauncherThread launcherThread;
-    public LimelightThread limelightThread;
+    public Limelight limelight;
 
     public AimAssist aimAssist;
 
@@ -96,15 +92,22 @@ public class Config {
         PPG,    // AprilTag 23
         NULL;
     }
+
     public enum Alliance {
-        RED,
-        BLUE;
+        RED(new Pose(144,144)),
+        BLUE(new Pose(0, 144));
+
+        private final Pose alliance;
+        Alliance(Pose alliance) { this.alliance = alliance; }
+        public Pose getPose() { return alliance; }
     }
+
     public enum DriverAmount {
         ONE_DRIVER,
         TWO_DRIVERS,
         DEV_DRIVER
     }
+
     Alliance alliance;
     DriverAmount driverAmount;
 
@@ -113,107 +116,134 @@ public class Config {
     public Mecanum mecanum;
     public TweetyBird tweetyBird;
 
-    // Pass opMode to config
-    public Config(LinearOpMode linearOpMode, OpMode opMode) {
+    // Follower
+    Follower follower;
+
+    private Config(LinearOpMode linearOpMode, OpMode opMode, Follower follower) {
         this.linearOpMode = linearOpMode;
-        this.opMode = opMode;}
+        this.opMode = opMode;
+        this.follower = follower;
+    }
+
+    public Config(LinearOpMode linearOpMode) {
+        this(linearOpMode,null,null);
+    }
+
+    public Config(LinearOpMode linearOpMode, Follower follower) {
+        this(linearOpMode,null,follower);
+    }
+
+    public Config(OpMode opMode) {
+        this(null,opMode,null);
+    }
+
+    public Config(OpMode opMode, Follower follower) {
+        this(null,opMode,follower);
+    }
 
     /// Initialization Method
     public void init() {
         motif = Motif.NULL;
-        setAlliance(Alliance.BLUE);
+        setAlliance(readAllianceFromFile());
         opModeIsActive = false;
 
         // Shorten HardwareMap for frequent use
         HardwareMap hwMap;
 
-        if(linearOpMode != null) {
+        if (linearOpMode != null) {
             hwMap = linearOpMode.hardwareMap;
             linearOpMode.telemetry.setMsTransmissionInterval(11);
             usingLinearOpMode = true;
-        }
-        else {
+        } else {
             hwMap = opMode.hardwareMap;
             opMode.telemetry.setMsTransmissionInterval(11);
+            opModeIsActive = true;
             usingLinearOpMode = false;
         }
 
         // IMU
-        imu = hwMap.get(IMU.class,"imu");
-        RevHubOrientationOnRobot.LogoFacingDirection logo = RevHubOrientationOnRobot.LogoFacingDirection.DOWN;
-        RevHubOrientationOnRobot.UsbFacingDirection usb = RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
+        //imu = hwMap.get(IMU.class, "imu");
+        //RevHubOrientationOnRobot.LogoFacingDirection logo = RevHubOrientationOnRobot.LogoFacingDirection.DOWN;
+        //RevHubOrientationOnRobot.UsbFacingDirection usb = RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
 
-        RevHubOrientationOnRobot orientationOnRobot = new RevHubOrientationOnRobot(logo, usb);
-        imu.initialize(new IMU.Parameters(orientationOnRobot));
+        //RevHubOrientationOnRobot orientationOnRobot = new RevHubOrientationOnRobot(logo, usb);
+        //imu.initialize(new IMU.Parameters(orientationOnRobot));
 
         // Front Left Drive
         fl = hwMap.get(DcMotorEx.class, "fl");
-        fl.setDirection(DcMotor.Direction.REVERSE);
-        fl.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        fl.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        fl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        fl.setDirection(DcMotorEx.Direction.REVERSE);
+        fl.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        fl.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        fl.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Front Right Drive
         fr = hwMap.get(DcMotorEx.class, "fr");
-        fr.setDirection(DcMotor.Direction.FORWARD);
-        fr.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        fr.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        fr.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        fr.setDirection(DcMotorEx.Direction.FORWARD);
+        fr.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        fr.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        fr.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Back Left Drive
         bl = hwMap.get(DcMotorEx.class, "bl");
-        bl.setDirection(DcMotor.Direction.REVERSE);
-        bl.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        bl.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        bl.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        bl.setDirection(DcMotorEx.Direction.REVERSE);
+        bl.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        bl.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        bl.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Back Right Drive
         br = hwMap.get(DcMotorEx.class, "br");
-        br.setDirection(DcMotor.Direction.FORWARD);
-        br.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        br.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        br.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        br.setDirection(DcMotorEx.Direction.FORWARD);
+        br.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        br.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
+        br.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Motor used in the Active Agitator module
         agitator = hwMap.get(DcMotorEx.class, "agitator");
         agitator.setDirection(DcMotorSimple.Direction.REVERSE);
+        agitator.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         agitator.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        agitator.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        agitator.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         // Modified Robot Launcher Motor
         launcherMotor = hwMap.get(DcMotorEx.class, "launcher");
-        launcherMotor.setDirection(DcMotorSimple.Direction.REVERSE);
-        launcherMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        launcherMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+        launcherMotor.setDirection(DcMotorEx.Direction.FORWARD);
+        launcherMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        launcherMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        launcherMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
+        launcherMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER,new PIDFCoefficients(130, 0,0,14.3));
+
+        // Called 'org' in spirit
+        intakeMotor = hwMap.get(DcMotorEx.class, "intake");
+        intakeMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        intakeMotor.setDirection(DcMotorEx.Direction.FORWARD);
 
         // Kicker Servo - Transfers artifacts from agitator to launcher
         leftKickerServo = hwMap.get(Servo.class, "lKickerServo");
         leftKickerServo.setPosition(storeLeftKickerPosition);
         rightKickerServo = hwMap.get(Servo.class, "rKickerServo");
         rightKickerServo.setPosition(storeRightKickerPosition);
-        intakeServo = hwMap.get(Servo.class, "intakeServo");
+        // IntakeLimiterServo
+        intakeLimServo = hwMap.get(Servo.class, "intakeLimServo");
+        intakeLimServo.setPosition(intakeLimServerActivePosition);
+
+        // Light
+        indicatorLight = hwMap.get(Servo.class, "bigStupidLight");
+        indicatorLight.setPosition(indicatorLightOn);
 
         // Launcher Multithreading
         launcherThread = new LauncherThread();
         launcherThread.setConfig(this);
 
-        limelightThread = new LimelightThread();
-        limelightThread.setConfig(this);
+        limelight = new Limelight(this);
 
         // Starts Threads
         checkAndRestartThreads();
 
         // Aim Assist
-        aimAssist = new AimAssist(this);
-
-        // Tilt Servos - Used to angle projectile
-        //leftTilt = hwMap.get(Servo.class, "leftTilt");
-        //rightTilt = hwMap.get(Servo.class, "rightTilt");
+        aimAssist = new AimAssist(this,1.5,0,0,0.6);
 
         // Limelight3A Camera
-        limelight = hwMap.get(Limelight3A.class, "limelight");
-
-
+        limelightCamera = hwMap.get(Limelight3A.class, "limelight");
 
         // Build drivetrain for TweetyBird Use
         mecanum = new Mecanum.Builder()
@@ -244,7 +274,13 @@ public class Config {
         log("Robot Initialized");
     }
 
-    /// Initializes TweetyBird.
+    public void aimAssistInit() {
+        aimAssist = new AimAssist(this,1.5,0,0,0.6);
+    }
+
+    /** Initializes TweetyBird.
+     * @deprecated In favor of Pedro-Pathing
+     */
     public void initTweetyBird() {
         log("TweetyBird Initialized");
         tweetyBird = new TweetyBird.Builder()
@@ -257,14 +293,13 @@ public class Config {
                 .setRotationBuffer(4) // Degree(s)
                 .setLoggingEnabled(true)
                 .build();
-        odometer.resetTo(0,0,0);
+        odometer.resetTo(0, 0, 0);
     }
 
     public boolean opModeisActive() {
-        if(usingLinearOpMode) {
+        if (usingLinearOpMode) {
             return linearOpMode.opModeIsActive();
-        }
-        else {
+        } else {
             return opModeIsActive;
         }
     }
@@ -273,20 +308,25 @@ public class Config {
     public void setAlliance(Alliance alliance) {
         log("Team set to " + alliance);
         this.alliance = alliance;
+        saveAllianceToFile(alliance);
     }
 
     public void increaseLauncherVelocity() {
-        idealLauncherVelocity = Range.clip(idealLauncherVelocity + 100,0,2500);
+        idealLauncherVelocity = Range.clip(idealLauncherVelocity + 100, 0, 2500);
     }
 
     public void decreaseLauncherVelocity() {
-        idealLauncherVelocity = Range.clip(idealLauncherVelocity - 100,0,2500);
+        idealLauncherVelocity = Range.clip(idealLauncherVelocity - 100, 0, 2500);
     }
 
     public void switchAlliance() {
-        switch(alliance) {
-            case RED: alliance = Alliance.BLUE; break;
-            case BLUE: alliance = Alliance.RED; break;
+        switch (alliance) {
+            case RED:
+                alliance = Alliance.BLUE;
+                break;
+            case BLUE:
+                alliance = Alliance.RED;
+                break;
         }
         saveAllianceToFile(alliance);
     }
@@ -365,6 +405,79 @@ public class Config {
         }
     }
 
+    /**
+     * Reads a Pose from file.
+     * Returns null if the file does not exist or is invalid.
+     */
+    public Pose readPoseFromFile() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "pose.txt");
+
+            if (!file.exists()) {
+                log("Pose file not found");
+                return null;
+            }
+
+            String contents = ReadWriteFile.readFile(file).trim();
+            String[] parts = contents.split(",");
+
+            if (parts.length != 3) {
+                log("Invalid pose format");
+                return null;
+            }
+
+            double x = Double.parseDouble(parts[0]);
+            double y = Double.parseDouble(parts[1]);
+            double heading = Double.parseDouble(parts[2]);
+
+            Pose pose = new Pose(x, y, heading);
+            log("Pose read from file: " + pose);
+
+            return pose;
+
+        } catch (Exception e) {
+            log("Failed to read pose: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Saves a Pose to file.
+     */
+    public void savePoseToFile(Pose pose) {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "pose.txt");
+
+            String data = pose.getX() + "," +
+                    pose.getY() + "," +
+                    pose.getHeading();
+
+            ReadWriteFile.writeFile(file, data);
+            log("Pose saved: " + pose);
+
+        } catch (Exception e) {
+            log("Failed to save pose: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Clears the saved pose file.
+     */
+    public void invalidateSavedPose() {
+        try {
+            File file = new File(AppUtil.FIRST_FOLDER, "pose.txt");
+
+            if (file.exists()) {
+                ReadWriteFile.writeFile(file, "");
+                log("Saved pose invalidated");
+            }
+
+        } catch (Exception e) {
+            log("Failed to invalidate pose: " + e.getMessage());
+        }
+    }
+
+
     public DriverAmount readDriverAmountFromFile() {
         try {
             File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
@@ -409,16 +522,11 @@ public class Config {
             log("Starting launcherThread");
             launcherThread.start();
         }
-        if (!limelightThread.isAlive()) {
-            log("Starting limelightThread");
-            limelightThread.start();
-        }
     }
 
     public void killThreads() {
         try {
             launcherThread.terminate();
-            limelightThread.terminate();
         } catch (Exception e) {
             log("Failed to stop launcherThread");
             throw new RuntimeException(e);
@@ -434,23 +542,57 @@ public class Config {
     }
 
     public void runIntakeAssembly() {
-        intakeServo.setPosition(intakeServoOnPower);
+        intakeMotor.setVelocity(intakeMotorOnVelocity);
         agitator.setPower(agitatorActivePower);
     }
+    public void runIntakeAssembly(double vel) {
+        intakeMotor.setVelocity(vel);
+        agitator.setPower(agitatorActivePower);
+    }
+
     public void stopIntakeAssembly() {
-        intakeServo.setPosition(intakeServerOffPower);
+        intakeMotor.setVelocity(intakeMotorOffVelocity);
         agitator.setPower(0);
     }
 
+    public void activateIntakeLimiter() {
+        desiredIntakeLimiterPosition = intakeLimServerActivePosition;
+        intakeLimServo.setPosition(intakeLimServerActivePosition);
+        devBool = true;
+    }
+
+    public void waitForLimiter() throws InterruptedException {
+        while(intakeLimServo.getPosition() != desiredIntakeLimiterPosition) {
+            Thread.sleep(50);
+        }
+    }
+
+    public void deactivateIntakeLimiter() {
+        desiredIntakeLimiterPosition = intakeLimServoInactivePosition;
+        intakeLimServo.setPosition(intakeLimServoInactivePosition);
+        devBool = false;
+    }
+
+    public void reverseIntakeAssembly() {
+        intakeMotor.setVelocity(-intakeMotorOnVelocity);
+        agitator.setPower(-agitatorActivePower);
+    }
+
     public void activateKicker() {
+        desiredLeftKickerPosition = activeLeftKickerPosition;
         leftKickerServo.setPosition(activeLeftKickerPosition);
         rightKickerServo.setPosition(activeRightKickerPosition);
     }
+
+    public void waitForKicker() throws InterruptedException {
+        Thread.sleep(200);
+    }
+
     public void storeKicker() {
+        desiredLeftKickerPosition = storeLeftKickerPosition;
         leftKickerServo.setPosition(storeLeftKickerPosition);
         rightKickerServo.setPosition(storeRightKickerPosition);
     }
-
 }
 
 /**
@@ -461,9 +603,9 @@ class LauncherThread extends Thread {
     Config robot;
     public void setConfig(Config robot) {this.robot = robot;}
 
-    private int artifactsToLaunch = 0;
+    private volatile boolean launchThree = false;
     private volatile boolean isBusy = false;
-    private volatile boolean holdPower = false;
+    private volatile double targetLauncherVelocity = 1300;
 
     private volatile boolean running = true; // When false, thread terminates
 
@@ -485,7 +627,20 @@ class LauncherThread extends Thread {
             isBusy = true;
             log("Set isBusy true in run.");
 
-            doLaunch(artifactsToLaunch, holdPower);
+            if(launchThree) {
+                try {
+                    doLaunch(3);
+                } catch (Exception e) {
+                    log("ERROR while LaunchThree: " + e);
+                }
+            }
+            else {
+                try {
+                    doLaunch(1);
+                } catch (Exception e) {
+                    log("ERROR while LaunchOne: " + e);
+                }
+            }
 
 
             isBusy = false;
@@ -502,49 +657,166 @@ class LauncherThread extends Thread {
         return isBusy;
     }
 
-    private void setLauncherVelocity(double velocity) {
-        robot.launcherMotor.setVelocity(velocity);
+    /**
+     * Waits for launcher motor to reach target velocity within tolerance.
+     * Includes timeout protection to prevent robot freezing.
+     * @param velocity target velocity
+     * @throws InterruptedException if thread is interrupted
+     */
+    private void waitForLauncherVelocity(double velocity) throws InterruptedException {
+        double curVelocity = robot.launcherMotor.getVelocity();
+        long startTime = System.currentTimeMillis();
+        long timeoutMs = 5000;
+        
+        while (!(curVelocity >= velocity-20 && curVelocity <= velocity+20)) {
+            if (System.currentTimeMillis() - startTime > timeoutMs) {
+                log("Timeout waiting for launcher velocity. Current: " + curVelocity + ", Target: " + velocity);
+                break;
+            }
+            
+            if (!robot.opModeisActive()) {
+                log("OpMode stopped during velocity wait");
+                break;
+            }
+            
+            curVelocity = robot.launcherMotor.getVelocity();
+            sleep(50);
+        }
+        
+        log("Launcher velocity reached: " + curVelocity + " (target: " + velocity + ")");
     }
 
-    private void doLaunch(int artifactsToLaunch, boolean keepPower) {
+    public void setLauncherVelocity(double velocity) {
+        targetLauncherVelocity = velocity;
+    }
+
+    public double getLauncherVelocity() {
+        return targetLauncherVelocity;
+    }
+
+    /**
+     * Sets launch motor to targetLauncherVelocity and waits for velocity to match.
+     * @implNote Use <I>aimAssist.setLauncherVelocity()</I> in an opMode to change this velocity.
+     */
+    private void updateLauncherVelocityAndWait() {
+        double velocity = targetLauncherVelocity; // Prevent race condition
+        robot.launcherMotor.setVelocity(velocity);
+        log("Launcher now running at '" + velocity + "' vel.");
+        try {
+            waitForLauncherVelocity(velocity);
+        } catch (InterruptedException e) {
+            log("Failed to update LauncherVelocity safely: " + e);
+        }
+    }
+
+    private void doLaunch(int artifactsToLaunch) {
         try {
             double agitatorStartPower = robot.agitator.getPower();
 
             robot.agitator.setPower(robot.agitatorActivePower);
+            robot.intakeMotor.setVelocity(robot.intakeMotorOnVelocity);
 
             //robot.aimAssist.runAngleCorrection(5);
             //robot.aimAssist.runPowerCalculation();
 
-            setLauncherVelocity(robot.idealLauncherVelocity);
-            sleep(robot.motorRampUpTime); // Ramp up motor
+            updateLauncherVelocityAndWait();
+            robot.deactivateIntakeLimiter();
+            sleep(150);
+            log("Kicking with Vel of: " + robot.launcherMotor.getVelocity());
             robot.activateKicker();
-            sleep(900);
+            robot.waitForKicker();
             // Artifact One fully exited
-            for (int i = 1; i <artifactsToLaunch; i++) {
-                robot.agitator.setPower(-robot.agitatorActivePower/2);
+            for (int i = 1; i < artifactsToLaunch; i++) {
+                robot.agitator.setPower(0);
+                //robot.intakeMotor.setVelocity(); // designed for power not vel
                 robot.storeKicker();
-                sleep(300); // wait for lowering of kicker
+                robot.waitForKicker();
                 robot.agitator.setPower(robot.agitatorActivePower);
-                sleep(600); // Waiting for artifact to enter kicker
+                robot.intakeMotor.setVelocity(200);
+                sleep(350); // Waiting for artifact to enter kicker
+                if(i==3){
+                    sleep(250); // Additional wait for third artifact
+                }
+                updateLauncherVelocityAndWait();
+                log("Kicking with Vel of: " + robot.launcherMotor.getVelocity());
                 robot.activateKicker();
-                sleep(900); // Artifact X fully exited
+                robot.waitForKicker();
             }
 
             // Go to IDLE mode
-            robot.agitator.setPower(-robot.agitatorActivePower);
-            robot.storeKicker();
-            sleep(200);
-            robot.agitator.setPower(agitatorStartPower);
-            if(!keepPower) {
-                setLauncherVelocity(0);
-                isBusy = false;
-            }
-            else {isBusy = false;}
+            idleLauncher();
 
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+    }
+     /// Sets the Launcher to an Idle state using safe method of clearing kicker path.
+    public void idleLauncher() {
+        robot.storeKicker();
+        robot.activateIntakeLimiter();
+        robot.launcherMotor.setVelocity(robot.idleLauncherVelocity);
+        log("Launcher set to Idle");
+    }
+
+    public void cancelLaunch() {
+        if(robot.launcherThread.isBusy) {
+            log("Cancel: Interrupting launcher");
+            robot.launcherThread.interrupt();
+            log("Cancel: Idling Launcher");
+            idleLauncher();
+
+        }
+
+    }
+
+    /**
+     * @deprecated Using doLaunch for both three and two currently.
+     * @throws InterruptedException
+     */
+    private void doLaunchThree() throws InterruptedException {
+
+        robot.agitator.setPower(robot.agitatorActivePower);
+        robot.intakeMotor.setVelocity(robot.intakeMotorOnVelocity*.4);
+
+        // !! Unstable: If idealVelocity changes -> may never reach
+        // Launch motor ramp up.
+        setLauncherVelocity(robot.idealLauncherVelocity);
+        waitForLauncherVelocity(robot.idealLauncherVelocity);
+
+        // First launch
+        robot.activateKicker();
+        robot.deactivateIntakeLimiter();
+
+        //robot.waitForKicker();
+
+        log("(1/3) - Artifact Launched");
+
+        // TODO: Reverse agitator
+        // TODO: Slow reverse intake
+
+        // Store kicker
+        robot.storeKicker();
+        //robot.waitForKicker();
+
+        // TODO: Set agitator forward - runToPos?
+        // TODO: Slow forward intake
+        // TODO: Wait for artifact to enter chamber - runToPos?
+
+        // Activate kicker
+        robot.activateKicker();
+        //robot.waitForKicker();
+
+        // TODO: motor reRamp - not in repeat
+        // TODO: repeat
+
+        // Activate Intake Limiter
+        robot.activateIntakeLimiter();
+        robot.waitForLimiter();
+
+        // TODO: turn off/on agitator && intake (option?)
+
+        log("Finished Launch Sequence Type:3");
     }
 
     public synchronized void terminate() {
@@ -552,13 +824,12 @@ class LauncherThread extends Thread {
         notify();
     }
 
-    public synchronized void launch(int artifactsToLaunch) {
-        this.artifactsToLaunch = artifactsToLaunch;
+    public synchronized void launchOne() {
+        launchThree = false;
         notify();
     }
-    public synchronized void launch(int artifactsToLaunch, boolean holdPower) {
-        this.holdPower = holdPower;
-        this.artifactsToLaunch = artifactsToLaunch;
+    public synchronized void launchThree() {
+        launchThree = true;
         notify();
     }
 
@@ -568,157 +839,135 @@ class LauncherThread extends Thread {
 
 }
 
-/**
- *
- */
-class LimelightThread extends Thread {
+
+class Limelight {
     Config robot;
-    public void setConfig(Config robot) {this.robot = robot;}
 
-    private volatile boolean running = true; // When false, thread terminates
+    double timeSincePipelineChange = 0;
+    ElapsedTime pipelineChangeTime = new ElapsedTime();
 
-    boolean scanGoalAngle = false;
-    boolean scanObelisk = false;
-    boolean isBusy = false;
+    public Limelight(Config robot) {this.robot = robot;}
 
-    @Override
-    public void run() {
-        while (running) {
-            synchronized (this) {
-                try {
-                    isBusy = false;
-                    wait(); // Sleep until notified (Save resources)
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
+    private enum Pipeline {
+        LOCALIZATION(0),
+        OBELISK(1),
+        RED_GOAL(2),
+        BLUE_GOAL(3);
 
-            if (!running) break; // check before doing work
-
-            if(scanGoalAngle){
-                isBusy = true;
-                doScanGoalAngle();
-                scanGoalAngle = false;
-            }
-            else if(scanObelisk){
-                isBusy = true;
-                doScanObelisk();
-                scanObelisk = false;
-            }
-
-        }
+        private final int pipeline;
+        Pipeline(int pipeline) { this.pipeline = pipeline; }
+        public int getValue() { return pipeline; }
     }
 
-    /// Limelight updates goalTx and goalTy
-    public synchronized void scanGoalAngle(){
-        if(!isBusy) {
-            scanGoalAngle = true;
-            notify();
-        }
-    }
-
-    /// Limelight updates motif
-    public synchronized void scanObelisk(){
-        if(!isBusy) {
-            scanObelisk = true;
-            notify();
-        }
-    }
-
-    /// Uses Limelight to detect Goal angle and update goalTx and goalTy.
-    private void doScanGoalAngle() {
-        int selectedPipeline;
-
+    /**
+     * Checks if limelight is currently running.
+     * If not: start limelight and polling. Already
+     * running? Do nothing.
+     */
+    private void startLimelight() {
         // Ensure polling for limelight data
-        if (!robot.limelight.isRunning()) {
+        if (!robot.limelightCamera.isRunning()) {
             robot.log("Limelight: Starting");
-            robot.limelight.start();
+            robot.limelightCamera.setPollRateHz(11);
+            robot.limelightCamera.start();
+            pipelineChangeTime.reset();
         }
+    }
 
+    private void changePipeline(Pipeline pipeline) {
         // Set desired pipeline
-        switch (robot.alliance) {
-            case BLUE:
-                selectedPipeline = robot.limelightBluePipeline;
-                break;
-            case RED:
-                selectedPipeline = robot.limelightRedPipeline;
-                break;
-            default:
-                selectedPipeline = 4;
-                break;
-        }
+        if(timeSincePipelineChange < 15) {
+            try {
+                Thread.sleep(15);
+            } catch (InterruptedException e) {
+                log("Pipeline Change Error: " + e);
+            }
 
-        // Set pipeline
-        if (robot.limelight.getStatus().getPipelineIndex() != selectedPipeline){
-            robot.log("Limelight: Pipeline change: " + selectedPipeline);
-            robot.limelight.pipelineSwitch(selectedPipeline);
+        }
+        if (robot.limelightCamera.getStatus().getPipelineIndex() != pipeline.getValue()) {
+            robot.limelightCamera.pipelineSwitch(pipeline.getValue());
+        }
+        timeSincePipelineChange = pipelineChangeTime.milliseconds();
+    }
+
+    double lastTx = 0;
+
+    public double scanGoalTx() {
+        startLimelight();
+
+        if(robot.alliance == Config.Alliance.BLUE) {
+            changePipeline(Pipeline.BLUE_GOAL);
+        }
+        else {
+            changePipeline(Pipeline.RED_GOAL);
         }
 
         // Get latest results
-        LLResult result = robot.limelight.getLatestResult();
+        LLResult result = robot.limelightCamera.getLatestResult();
 
-        // Update angles
-        if (result != null && result.isValid()) {
-            robot.goalAnglesAreValid = true;
-            robot.goalTx = result.getTx();
-            robot.goalTy = result.getTy();
-            robot.goalAvgDist = result.getBotposeAvgDist();
+        if(result != null && result.isValid()) {
+            log("ScanGoalTx = " + result.getTx());
+            lastTx = result.getTx();
+            return result.getTx();
+        }
+        log("ScanGoalTx = d " + lastTx);
+        return lastTx;
+    }
+
+    public GoalResults scanGoalAngle() {
+        int selectedPipeline;
+
+        startLimelight();
+
+        if(robot.alliance == Config.Alliance.BLUE) {
+            changePipeline(Pipeline.BLUE_GOAL);
         }
         else {
-            robot.goalAnglesAreValid = false;
+            changePipeline(Pipeline.RED_GOAL);
         }
 
-    }
-    public void doScanObelisk() {
-        int aprilTag = 0;
-        Config.Motif tempMotif;
+        // Get latest results
+        LLResult result = robot.limelightCamera.getLatestResult();
 
-        if (!robot.limelight.isRunning()) {
-            robot.log("Limelight: Starting");
-            robot.limelight.start();
-        }
-        if (robot.limelight.getStatus().getPipelineIndex() != robot.limelightObeliskPipeline) {
-            robot.log("Limelight: Pipeline changed to OBELISK");
-            robot.limelight.pipelineSwitch(robot.limelightObeliskPipeline);
-        }
-        LLResult result = robot.limelight.getLatestResult();
-
+        GoalResults goalResults = new GoalResults();
+        // Update angles
         if (result != null && result.isValid()) {
-            // Access fiducial results
-            List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
-            aprilTag = fiducialResults.get(0).getFiducialId();
+            goalResults.setResults(true,result.getTx(),
+                    result.getTy(),result.getBotposeAvgDist());
+        }
+        else {
+            goalResults.setGoalAnglesAreValid(false);
         }
 
-        switch (aprilTag) {
-            case (21):
-                tempMotif = Config.Motif.GPP;
-                break;
-            case (22):
-                tempMotif = Config.Motif.PGP;
-                break;
-            case (23):
-                tempMotif = Config.Motif.PPG;
-                break;
-            default:
-                tempMotif = Config.Motif.NULL;
-                break;
-        }
-        if (tempMotif != Config.Motif.NULL) {
-            robot.log("Motif changed to: " + robot.motif);
-            robot.motif = tempMotif;
-        }
+        return goalResults;
 
-    }
-
-    public synchronized void terminate() {
-        running = false;
-        notify();
     }
 
     private void log(String message) {
-        robot.log("[LLThread] - " + message);
+        robot.log("[Limelight] - " + message);
     }
+
+}
+
+class GoalResults {
+    boolean goalAnglesAreValid = false;
+    double goalTx;
+    double goalTy;
+    double goalAvgDist;
+
+    public void setResults(boolean validity, double goalTx, double goalTy, double goalAvgDist) {
+        goalAnglesAreValid = validity;
+        this.goalTx = goalTx;
+        this.goalTy = goalTy;
+        this.goalAvgDist = goalAvgDist;
+    }
+    public void setGoalAnglesAreValid(boolean validity) {
+        goalAnglesAreValid = validity;
+    }
+    public void setGoalTx(double goalTx) {this.goalTx = goalTx;}
+    public void setGoalTy(double goalTy) {this.goalTy = goalTy;}
+    public void setGoalAvgDist(double goalAvgDist) {this.goalAvgDist = goalAvgDist;}
+
 }
 
 class AimAssist {
@@ -732,90 +981,216 @@ class AimAssist {
     private final double minWheelPower = 0.1; // Smallest amount of power that still moves wheels
     private double correctionPower = 0.3;
     private double scaleFactor = 0.05;
+    private boolean simpleMode = false;
 
-    Config robot;
+    GoalResults goalAngles = new GoalResults();
 
-    public AimAssist(Config robot) {
-        this.robot = robot;
-        log("Ready.");
+    private enum Poses {
+        CLOSE_LAUNCH_1(new Pose(0,0,0)),
+        CLOSE_LAUNCH_2(new Pose(0,0,0)),
+        CLOSE_LAUNCH_3(new Pose(0,0,0));
+
+        private final Pose pose;
+        Poses(Pose pose) {this.pose = pose;}
+        public Pose getValue() {return pose;}
     }
 
     /**
-     * Corrects robot heading to align with alliance goal.
-     * Unless opMode stops, timeOut, or cancelCorrection.
-     *
-     * @apiNote For cancelCorrection to work, this must be run in a different thread,
-     * as runCorrection utilizes a while loop to complete its task.
-     *
-     * @param timeOut Max time AimAssist can work in seconds.
+     * @return true if active
      */
-    public void runAngleCorrection(double timeOut) {
+    public boolean getSimpleStatus() {
+        return simpleMode;
+    }
 
-        ElapsedTime runtime = new ElapsedTime();
-        runtime.reset();
+    /**
+     * Enables simple mode for all AimAssist methods.
+     */
+    public void enableSimpleMode() {
+        simpleMode = true;
+    }
 
-        robot.limelightThread.scanGoalAngle();
+    /**
+     * Disable simple mode for all AimAssist methods.
+     */
+    public void disableSimpleMode() {
+        simpleMode = false;
+    }
 
-        if(!robot.goalAnglesAreValid) {
-            log("Goal Angles Invalid, Cancelling.");
-            return;
+    public Pose getNearestPose(Pose currentPose) {
+
+        Poses[] shootingPoses = Poses.values();
+
+        double lowestDistance = 99999;
+        Pose closestPose = currentPose;
+
+        for (Poses launchPose : shootingPoses) {
+            if(getPoseDistance(currentPose,launchPose.getValue()) < lowestDistance) {
+                lowestDistance = getPoseDistance(currentPose,launchPose.getValue());
+                closestPose = launchPose.getValue();
+            }
+        }
+        return closestPose;
+    }
+
+    public double getPoseDistance(Pose p1, Pose p2) {
+        double dx = p1.getPose().getX() - p2.getPose().getX();
+        double dy = p1.getPose().getY() - p2.getPose().getY();
+        double dz = p1.getPose().getHeading() - p2.getPose().getHeading();
+
+
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    Config robot;
+
+    HeadingPID headingPID;
+
+    public AimAssist(Config robot, double kP, double kI, double kD, double maxPower) {
+        this.robot = robot;
+        headingPID = new HeadingPID(kP, kI, kD);
+        headingPID.setOutputLimits(maxPower);
+        log("Ready.");
+    }
+
+    public double getCorrectionYaw(Pose currentPose, Pose targetToFace) {
+        double headingCalc = robot.aimAssist.getHeadingForTarget(currentPose,targetToFace);
+        return currentPose.getHeading()-headingCalc;
+    }
+
+    /**
+     * Calculates desired heading to face a position on a pedro-field. <break></break>
+     * <b>Simple Mode:</b> returns BLUE=135deg  RED=35deg (In Radians)
+     * @param currentPose Robot current position on the field <b>(must be correct)</b>
+     * @param targetToFace Pose of the desired position to be facing
+     * @return The correct heading in radians to face the target Pose
+     * @SimpleMode returns BLUE=135deg  RED=35deg (In Radians)
+     */
+    public double getHeadingForTarget(Pose currentPose, Pose targetToFace) {
+
+        if (simpleMode) {
+            return (robot.alliance == Config.Alliance.RED ? 35 : 135);
         }
 
-        double desiredTx;
+        // Robot's current state
+        double robotX = currentPose.getX();
+        double robotY = currentPose.getY();
+        double currentZ = currentPose.getHeading(); // Heading in radians
 
+        // Target coordinates
+        double targetX = targetToFace.getX();
+        double targetY = targetToFace.getY();
+
+        // Calculate the target heading in the field frame
+        double deltaX = targetX - robotX;
+        double deltaY = targetY - robotY;
+        double targetHeading = Math.atan2(deltaY, deltaX);
+
+        //log("target to face " + targetToFace);
+        //log("getHeadingForTarget yields " + targetHeading);
+        return targetHeading;
+    }
+
+    /**
+     * Wraps angles (Radians).
+     * @param angle Radian angle.
+     * @return Normalized angle between -pi and pi.
+     */
+    public static double angleWrap(double angle) {
+        while (angle > Math.PI) angle -= 2 * Math.PI;
+        while (angle < -Math.PI) angle += 2 * Math.PI;
+        return angle;
+    }
+
+    /**
+     *
+     * @return The correct alliance goal heading.
+     */
+    public double simpleGoalHeading() {
         if(robot.alliance == Config.Alliance.RED) {
-            desiredTx = redDesiredTx;
-            log("Correcting for Red.");
+            return Math.toRadians(135);
         }
-        else {
-            desiredTx = blueDesiredTx;
-            log("Correcting for Blue.");
+        else{
+            return Math.toRadians(50); // Why flipped ??? Idk
+        }
+    }
+
+    class HeadingPID {
+
+        private double kP;
+        private double kI;
+        private double kD;
+
+        private double integralSum = 0.0;
+        private double lastError = 0.0;
+        private long lastTime;
+
+        private double minOutput = -1.0;
+        private double maxOutput = 1.0;
+
+        public HeadingPID(double kP, double kI, double kD) {
+            this.kP = kP;
+            this.kI = kI;
+            this.kD = kD;
+            lastTime = System.nanoTime();
         }
 
-        log("Entering loop.");
-        while(robot.opModeisActive() && timeOut > runtime.time()) {
-            robot.limelightThread.scanGoalAngle();
-
-            double distance = Math.abs(robot.goalTx - desiredTx);
-            correctionPower = Range.clip(distance*scaleFactor, 0.1, 0.2);
-
-
-            if(distance < 0.5) {
-                log("Within tolerance, Closing Loop...");
-                break;
-            }
-            else if(robot.goalTx > desiredTx) {
-                // Rotate right
-                robot.setWheelPower(correctionPower,-correctionPower,correctionPower,-correctionPower);
-            }
-            else if(robot.goalTx < desiredTx) {
-                // Rotate left
-                robot.setWheelPower(-correctionPower,correctionPower,-correctionPower,correctionPower);
-            }
+        public void setOutputLimits(double max) {
+            minOutput = -max;
+            maxOutput = max;
         }
-        robot.setWheelPower(0,0,0,0);
-        log("Loop Closed.");
 
+        public void reset() {
+            integralSum = 0.0;
+            lastError = 0.0;
+            lastTime = System.nanoTime();
+        }
+
+        /**
+         *
+         * @param error Distance in radians from target heading (AutoWrapped)
+         * @apiNote Use AimAssist's getHeadingForTarget() for calculating error
+         * @return A value between -1 and 1 used for yaw motions
+         */
+        public double calculate(double error) {
+
+            error = AimAssist.angleWrap(error);
+
+            long now = System.nanoTime();
+            double deltaTime = (now - lastTime) / 1e9;
+            lastTime = now;
+
+            integralSum += error * deltaTime;
+            double derivative = deltaTime > 0 ? (error - lastError) / deltaTime : 0.0;
+            lastError = error;
+
+            double output = (kP * error) + (kI * integralSum) + (kD * derivative);
+
+            if (output > maxOutput) output = maxOutput;
+            if (output < minOutput) output = minOutput;
+
+            return output;
+        }
     }
 
     /**
      * Sets robot ideal launch velocity for current position
-     * using Limelight camera.
+     * using odometry and camera positioning.
+     *
+     * @return the ideal launcher velocity for current position
+     * @SimpleMode returns robot.overrideLauncherVel
      */
-    public void runPowerCalculation() {
+    public double runPowerCalculation(Pose currentPose, Pose targetPose) {
 
-        double x = robot.goalTy;
-        robot.idealLauncherVelocity = -2.46914*Math.pow(x,3)+74.07407*Math.pow(x,2)-751.85185*x+3880.24691;
+        if(simpleMode) {
+            return robot.overrideLauncherVel;
+        }
+
+        // Distance from target represented as x
+        double x = robot.aimAssist.getPoseDistance(currentPose, targetPose);
+        double idealLauncherVelocity = (0.0197859*x*x)+(1.33493*x)+967.92439; // Not using Math.pow for speed sake
         log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
 
-
-
-        /*
-        double x = robot.goalAvgDist;
-        robot.idealLauncherVelocity = (989.29847*x)+255.92292;
-        log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
-
-         */
+        return idealLauncherVelocity;
 
     }
 

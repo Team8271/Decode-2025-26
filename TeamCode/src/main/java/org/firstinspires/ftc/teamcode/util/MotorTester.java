@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.util;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.teamcode.robot.Config;
 
@@ -31,7 +32,7 @@ public class MotorTester extends LinearOpMode {
         // Populating motors list
         for (Field field : robot.getClass().getDeclaredFields()) {
 
-            if (field.getType() == DcMotor.class) {
+            if (field.getType() == DcMotorEx.class) {
                 field.setAccessible(true);
 
                 // Setting
@@ -39,7 +40,7 @@ public class MotorTester extends LinearOpMode {
                 try {
                     Object value = field.get(robot);
 
-                    newMotor = new detectedMotor(field.getName(), (DcMotor) value);
+                    newMotor = new detectedMotor(field.getName(), (DcMotorEx) value);
                     motorsList.add(newMotor);
 
                     telemetry.addData("New Detection",newMotor.getName());
@@ -131,7 +132,7 @@ class detectedMotor {
     private String name = null;
     private DcMotor instance = null;
 
-    public detectedMotor(String motorName, DcMotor motorInstance) {
+    public detectedMotor(String motorName, DcMotorEx motorInstance) {
         name = motorName;
         instance = motorInstance;
     }

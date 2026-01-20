@@ -8,7 +8,9 @@ import com.pedropathing.ftc.FollowerBuilder;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.Encoder;
 import com.pedropathing.ftc.localization.constants.ThreeWheelConstants;
+import com.pedropathing.ftc.localization.constants.ThreeWheelIMUConstants;
 import com.pedropathing.paths.PathConstraints;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
@@ -27,7 +29,7 @@ public class Constants {
 
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 0.8, 1);
 
-    public static ThreeWheelConstants localizerConstants = new ThreeWheelConstants()
+    public static ThreeWheelIMUConstants localizerConstants = new ThreeWheelIMUConstants()
             .forwardTicksToInches(.0029258769839086633)
             .strafeTicksToInches(.002852051308326529)
             .turnTicksToInches(.00291887512018613)
@@ -39,12 +41,14 @@ public class Constants {
             .strafeEncoder_HardwareMapName("br")
             .leftEncoderDirection(Encoder.FORWARD)
             .rightEncoderDirection(Encoder.REVERSE)
-            .strafeEncoderDirection(Encoder.FORWARD);
+            .strafeEncoderDirection(Encoder.FORWARD)
+            .IMU_HardwareMapName("imu")
+            .IMU_Orientation(new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.DOWN, RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD));
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants, hardwareMap)
                 .pathConstraints(pathConstraints)
-                .threeWheelLocalizer(localizerConstants)
+                .threeWheelIMULocalizer(localizerConstants)
                 .mecanumDrivetrain(driveConstants)
                 .build();
     }
@@ -62,5 +66,6 @@ public class Constants {
             .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
             .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
             .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD);
+            .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
+            .useBrakeModeInTeleOp(true);
 }
