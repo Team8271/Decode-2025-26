@@ -37,8 +37,8 @@ public class Config {
 
     // Changeable Power Values
     public final double
-            agitatorActivePower = 1, intakeMotorOnVelocity = 500, intakeMotorOffVelocity = 0,
-            overrideLauncherVel = 1300;
+            agitatorActivePower = 1, intakeMotorOnVelocity = 750, intakeMotorOffVelocity = 0,
+            overrideLauncherVel = 1225;
 
     private final double
             storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1 - storeLeftKickerPosition,
@@ -46,14 +46,14 @@ public class Config {
             intakeLimServerActivePosition = 1, intakeLimServoInactivePosition = 0.5;
 
     public final double indicatorLightOn = 0.3, indicatorLightOff = 0,
-                        indicatorLightReverse = 0.555;
+                        indicatorLightReverse = 0.555, indicatorLightOffBog = 0.444;
 
     public final int motorRampUpTime = 3000;
 
     public boolean devBool = false;
 
     // This value will be changed with Limelight sensing to get the ideal power
-    public double idealLauncherVelocity = 1900, idleLauncherVelocity = 900;
+    public double idealLauncherVelocity = 1225, idleLauncherVelocity = 900;
 
     private double  desiredLeftKickerPosition = storeLeftKickerPosition,
                     desiredIntakeLimiterPosition = intakeLimServerActivePosition;
