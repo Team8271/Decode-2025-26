@@ -4,6 +4,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -14,6 +15,8 @@ public class TheBestTeleEverMade extends LinearOpMode {
     private Follower follower;
     //private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
     private Pose startPose; // Start Pose of robot.
+    ElapsedTime runtime = new ElapsedTime();
+    double lastLauncherCalcTime = 0;
 
 
     // TODO: Limelight pose updating
@@ -49,7 +52,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
         robot.invalidateSavedPose();
 
         // !! dev
-        resetPose(56, 12, Math.toRadians(90)); // Blue far start
+        //resetPose(56, 12, Math.toRadians(90)); // Blue far start
 
         telemetry.addData("Alliance", robot.alliance);
         telemetry.update();
@@ -97,6 +100,12 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
             if (aimAssist) {
                 // Aim Assist is active
+
+                if (runtime.milliseconds() > lastLauncherCalcTime + 50) {
+                    robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
+                    lastLauncherCalcTime = runtime.milliseconds();
+                }
+
                 double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),robot.alliance.getPose());
 
                 double error = follower.getHeading()-headingCalc;
@@ -130,9 +139,11 @@ public class TheBestTeleEverMade extends LinearOpMode {
             if(aimAssistOverrideToggle) {
                 if(robot.aimAssist.getSimpleStatus()) {
                     robot.aimAssist.disableSimpleMode();
+                    gamepad2.rumbleBlips(2);
                 }
                 else {
                     robot.aimAssist.enableSimpleMode();
+                    gamepad2.rumbleBlips(3);
                 }
             }
 
@@ -171,10 +182,11 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
             }
 
-            if (robot.intakeMotor.getVelocity() < robot.intakeMotorOnVelocity-50) {
+            //
+            if(robot.intakeMotor.getVelocity() > 70) { // Running
                 robot.indicatorLight.setPosition(robot.indicatorLightOn);
             }
-            else {
+            else { // Not Running
                 robot.indicatorLight.setPosition(robot.indicatorLightOff);
             }
 
@@ -193,7 +205,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
             }
 
             telemetry.addData("Launcher Velocity", robot.launcherThread.getLauncherVelocity());
-            telemetry.addData("Intake Power", robot.intakeMotor.getPower());
+            telemetry.addData("Intake Vel", robot.intakeMotor.getVelocity());
             telemetry.addData("Position", follower.getPose());
 
             // One Driver Telemetry
@@ -208,12 +220,11 @@ public class TheBestTeleEverMade extends LinearOpMode {
                     "    Launch One Artifact - A\n" +
                     "    Launch Three Artifacts - Y\n" +
                     "    Agitator Assembly - B\n" +
-                    "    Increase Launcher Power - dPad Up\n" +
-                    "    Decrease Launcher Power - dPad Down");
+                    "    Simple Mode - DPad-Right");
 
             telemetry.update();
         }
-        robot.savePoseToFile(follower.getPose());
+        //robot.savePoseToFile(follower.getPose());
     }
 
     private void runSelector() {
