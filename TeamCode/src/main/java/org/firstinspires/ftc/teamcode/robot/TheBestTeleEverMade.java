@@ -16,7 +16,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
     //private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
     private Pose startPose; // Start Pose of robot.
     ElapsedTime runtime = new ElapsedTime();
-    double lastLauncherCalcTime = 0;
+    double lastCalcTime = 0;
 
 
     // TODO: Limelight pose updating
@@ -101,21 +101,26 @@ public class TheBestTeleEverMade extends LinearOpMode {
             if (aimAssist) {
                 // Aim Assist is active
 
-                if (runtime.milliseconds() > lastLauncherCalcTime + 50) {
+                // Run intensive calculations every delay seconds
+                double delay = 25;
+                if (runtime.milliseconds() > lastCalcTime + delay) {
                     robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
-                    lastLauncherCalcTime = runtime.milliseconds();
+
+                    double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),robot.alliance.getPose());
+
+                    double error = follower.getHeading()-headingCalc;
+
+                    telemetry.addData("AA ERROR", error);
+
+                    yawControl = robot.aimAssist.headingPID.calculate(error);
+
+                    // Drive
+                    setTeleOpDrive(axial, lateral, yawControl, throttle, false);
+
+                    lastCalcTime = runtime.milliseconds();
                 }
 
-                double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),robot.alliance.getPose());
 
-                double error = follower.getHeading()-headingCalc;
-
-                telemetry.addData("AA ERROR", error);
-
-                yawControl = robot.aimAssist.headingPID.calculate(error);
-
-                // Drive
-                setTeleOpDrive(axial, lateral, yawControl, throttle, false);
             }
             else {
                 // Driver 1 Controlling
@@ -223,6 +228,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
                     "    Simple Mode - DPad-Right");
 
             telemetry.update();
+            sleep(1); // Save resources
         }
         //robot.savePoseToFile(follower.getPose());
     }
