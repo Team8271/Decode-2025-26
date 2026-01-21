@@ -711,7 +711,7 @@ class LauncherThread extends Thread {
 
     private void doLaunch(int artifactsToLaunch) {
         try {
-            double agitatorStartPower = robot.agitator.getPower();
+            boolean intakeWasRunning = robot.agitator.getPower() != 0;
 
             robot.agitator.setPower(robot.agitatorActivePower);
             robot.intakeMotor.setVelocity(robot.intakeMotorOnVelocity);
@@ -745,6 +745,10 @@ class LauncherThread extends Thread {
 
             // Go to IDLE mode
             idleLauncher();
+            if (intakeWasRunning) {
+                robot.runIntakeAssembly();
+            }
+            else {robot.stopIntakeAssembly();}
 
         }
         catch (InterruptedException e) {
