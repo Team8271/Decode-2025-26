@@ -13,8 +13,8 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 public class TheBestTeleEverMade extends LinearOpMode {
     Config robot;
     private Follower follower;
-    //private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
-    private Pose startPose; // Start Pose of robot.
+    //private Pose startPose; // Start Pose of robot.
+    private Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Red Far if no pose in file
     ElapsedTime runtime = new ElapsedTime();
     double lastCalcTime = 0;
 
@@ -47,7 +47,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
         if(robot.readPoseFromFile() != null) {
             startPose = robot.readPoseFromFile();
-        } else {startPose = new Pose();}
+        }
         resetPose(startPose.getX(), startPose.getY(), startPose.getHeading());
         robot.invalidateSavedPose();
 
