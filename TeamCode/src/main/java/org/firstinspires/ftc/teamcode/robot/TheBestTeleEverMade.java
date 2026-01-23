@@ -16,7 +16,8 @@ public class TheBestTeleEverMade extends LinearOpMode {
     //private Pose startPose; // Start Pose of robot.
     private Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Red Far if no pose in file
     ElapsedTime runtime = new ElapsedTime();
-    double lastCalcTime = 0;
+    double lastAACalcTime = 0;
+    double lastLauncherCalcTime = 0;
 
 
     // TODO: Limelight pose updating
@@ -98,14 +99,20 @@ public class TheBestTeleEverMade extends LinearOpMode {
                 log("FCD Reset");
             }
 
+            if (robot.launcherThread.isBusy()) {
+                double delay = 20;
+                if (runtime.milliseconds() > lastLauncherCalcTime + delay) {
+                    robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
+                }
+                lastLauncherCalcTime = runtime.milliseconds();
+            }
+
             if (aimAssist) {
                 // Aim Assist is active
 
                 // Run intensive calculations every delay seconds
-                double delay = 25;
-                if (runtime.milliseconds() > lastCalcTime + delay) {
-                    robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
-
+                double delay = 20;
+                if (runtime.milliseconds() > lastAACalcTime + delay) {
                     double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),robot.alliance.getPose());
 
                     double error = follower.getHeading()-headingCalc;
@@ -117,7 +124,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
                     // Drive
                     setTeleOpDrive(axial, lateral, yawControl, throttle, false);
 
-                    lastCalcTime = runtime.milliseconds();
+                    lastAACalcTime = runtime.milliseconds();
                 }
 
 
