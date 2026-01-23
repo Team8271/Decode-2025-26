@@ -4,6 +4,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
@@ -14,6 +15,8 @@ public class HeadingPIDTuner extends LinearOpMode {
 
     Config robot;
     Pose startingPose;
+    ElapsedTime runtime = new ElapsedTime();
+    double lastAACalcTime = 0;
 
     private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
 
@@ -36,7 +39,7 @@ public class HeadingPIDTuner extends LinearOpMode {
         Pose targetGoal = new Pose(144,144);
 
         HeadingPID headingPID = new HeadingPID(1.5, 0.0, 0.0);
-        headingPID.setOutputLimits(-0.6, 0.6);
+        headingPID.setOutputLimits(-0.8, 0.8);
 
         telemetry.addLine("Waiting for Start");
         telemetry.update();
@@ -66,16 +69,22 @@ public class HeadingPIDTuner extends LinearOpMode {
                 headingPID.reset();
             }
             else {
-                // PID yaw correction
-                double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),targetGoal);
+                // Run intensive calculations every delay seconds
+                double delay = 20;
+                if (runtime.milliseconds() > lastAACalcTime + delay) {
+                    double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),robot.alliance.getPose());
 
-                telemetry.addData("Current Head",follower.getHeading());
-                telemetry.addData("Heading Calc",headingCalc);
-                telemetry.addData("Difference  ",follower.getHeading()-headingCalc);
+                    double error = follower.getHeading()-headingCalc;
 
-                double error = follower.getHeading()-headingCalc;
+                    telemetry.addData("AA ERROR", error);
 
-                yawControl = headingPID.calculate(error);
+                    yawControl = robot.aimAssist.headingPID.calculate(error);
+
+                    // Drive
+                    setTeleOpDrive(axial, lateral, yawControl, throttle, false);
+
+                    lastAACalcTime = runtime.milliseconds();
+                }
             }
 
             // Drive
@@ -96,6 +105,7 @@ public class HeadingPIDTuner extends LinearOpMode {
             telemetry.addData("Target Heading", targetHeading);
             telemetry.addData("Current Heading", getHeading());
             telemetry.update();
+            sleep(1);
         }
     }
 
