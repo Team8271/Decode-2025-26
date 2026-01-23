@@ -19,18 +19,18 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(9)
-            .forwardZeroPowerAcceleration(-38.82019704346193)
-            .lateralZeroPowerAcceleration(-75.61359656171102)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.5, 0, 0.03, 0.01))
-            .headingPIDFCoefficients(new PIDFCoefficients(0.9, 0, 0, 0))
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.022, 0, 0.00001, 0.6,0.01))
+            .mass(12.7) // was 9
+            .forwardZeroPowerAcceleration(-29.3299350376224)  // was -38.82019704346193
+            .lateralZeroPowerAcceleration(-60.3384249972585) // was -75.61359656171102
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.3, 0, 0.01, 0.01)) // was 0.5,0,0.03,0.01
+            .headingPIDFCoefficients(new PIDFCoefficients(2, 0, 0.03, 0.01)) // was 0.9,0,0,0
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.05,0,0.004,0.5,0.01)) // was 0.022,0,0.00001,0.6,0.01
             .centripetalScaling(0.0004);
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 0.8, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 0.9, 0.22);
 
     public static ThreeWheelIMUConstants localizerConstants = new ThreeWheelIMUConstants()
-            .forwardTicksToInches(.0029258769839086633)
+            .forwardTicksToInches(.002938279455340995)
             .strafeTicksToInches(.002852051308326529)
             .turnTicksToInches(.00291887512018613)
             .leftPodY(5.34375)
@@ -57,8 +57,8 @@ public class Constants {
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1)
-            .xVelocity(76.33621307311817)
-            .yVelocity(55.02929246176179)
+            .xVelocity(70.8551205075731) // was 76.33621307311817
+            .yVelocity(50.8646120579768) // was 55.02929246176179
             .rightFrontMotorName("fr")
             .rightRearMotorName("br")
             .leftRearMotorName("bl")
