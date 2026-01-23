@@ -1091,6 +1091,8 @@ class AimAssist {
 
         //log("target to face " + targetToFace);
         //log("getHeadingForTarget yields " + targetHeading);
+        if (Math.toDegrees(targetHeading) < 13) {targetHeading = 1;}
+        if (Math.toDegrees(targetHeading) > 167) {targetHeading = 179;}
         return targetHeading;
     }
 
