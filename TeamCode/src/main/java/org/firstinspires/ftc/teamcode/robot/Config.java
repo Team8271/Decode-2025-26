@@ -43,7 +43,7 @@ public class Config {
     private final double
             storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1 - storeLeftKickerPosition,
             activeLeftKickerPosition = 0, activeRightKickerPosition = 1 - activeLeftKickerPosition,
-            intakeLimServerActivePosition = 1, intakeLimServoInactivePosition = 0.5;
+            intakeLimServerActivePosition = 0.85, intakeLimServoInactivePosition = 0.5;
 
     public final double indicatorLightOn = 0.3, indicatorLightOff = 0,
                         indicatorLightReverse = 0.555, indicatorLightOffBog = 0.444;
