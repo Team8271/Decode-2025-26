@@ -105,7 +105,7 @@ public class AutoMaker {
      * Examples:
      * build(P(startPose), P(pose1), P(pose2)) → [startPose, path(pose1→pose2)]
      * build(P(startPose), P(pose1), A(RUN_INTAKE), P(pose2), P(pose3)) → [startPose, path(pose1→pose2), RUN_INTAKE, path(pose2→pose3)]
-     * 
+     *
      * @param commands Auto Commands to run. Must start with PoseCmd.
      * @return A sequence ready to run using updateSequence()
      * @throws IllegalArgumentException if first command is not a PoseCmd
@@ -115,97 +115,149 @@ public class AutoMaker {
         waitingForLauncher = false;
         commandIndex = 0;
 
-        List<AutoCommand> commandList = new ArrayList<AutoCommand>();
+        List<AutoCommand> commandList = new ArrayList<>();
 
-        if (commands.length == 0) {
-            return new Sequence(commandList);
-        }
+        if (commands.length == 0) return new Sequence(commandList);
 
-        // First command must be PoseCmd for setting start position
         if (!(commands[0] instanceof PoseCmd)) {
-            throw new IllegalArgumentException("First command must be a PoseCmd for setting start position");
+            throw new IllegalArgumentException("First command must be a PoseCmd");
         }
 
-        // Add the first pose command directly (for setting start position)
-        commandList.add(commands[0]);
+        // Start pose
+        PoseCmd lastPose = (PoseCmd) commands[0];
+        commandList.add(lastPose);
 
-        // Process remaining commands - look ahead for pose pairs
-        // Start from i=1, but track the previous pose for pairing
-        PoseCmd prevPose = null;
+        // Process the rest
         for (int i = 1; i < commands.length; i++) {
-            if (commands[i] instanceof PoseCmd) {
-                PoseCmd currentPose = (PoseCmd) commands[i];
-                
-                if (prevPose != null) {
-                    // We have a pair of poses - create PathChain
-                    commandList.add(new PathChainCmd(follower.pathBuilder()
-                            .addPath(new BezierCurve(prevPose.pose, currentPose.pose))
-                            .setLinearHeadingInterpolation(prevPose.pose.getHeading(), currentPose.pose.getHeading())
-                            .build()));
-                    prevPose = null; // Reset for next pair
-                } else {
-                    // Store current pose as the first in a potential pair
-                    prevPose = currentPose;
-                }
-            } else if (commands[i] instanceof ActionCmd || commands[i] instanceof PathChainCmd) {
-                // If we have an unmatched pose, add it first
-                if (prevPose != null) {
-                    commandList.add(prevPose);
-                    prevPose = null;
-                }
-                // Add ActionCmd or PathChainCmd directly
-                commandList.add(commands[i]);
+            AutoCommand cmd = commands[i];
+
+            if (cmd instanceof PoseCmd) {
+                PoseCmd nextPose = (PoseCmd) cmd;
+
+                // Build path immediately
+                commandList.add(new PathChainCmd(
+                        follower.pathBuilder()
+                                .addPath(new BezierCurve(lastPose.pose, nextPose.pose))
+                                .setLinearHeadingInterpolation(
+                                        lastPose.pose.getHeading(),
+                                        nextPose.pose.getHeading()
+                                )
+                                .build()
+                ));
+
+                lastPose = nextPose; // carry forward
+            }
+            else {
+                // ActionCmd or PathChainCmd
+                commandList.add(cmd);
             }
         }
-        
-        // Add any remaining unmatched pose
-        if (prevPose != null) {
-            commandList.add(prevPose);
+
+        Sequence seq = new Sequence(commandList);
+        dumpSequence(seq);
+        return seq;
+    }
+
+
+
+    private void dumpSequence(Sequence sequence) {
+        robot.log("[AMaker] ===== BUILT SEQUENCE =====");
+        List<AutoCommand> cmds = sequence.getCommands();
+
+        for (int i = 0; i < cmds.size(); i++) {
+            AutoCommand cmd = cmds.get(i);
+
+            if (cmd instanceof PoseCmd) {
+                Pose p = ((PoseCmd) cmd).pose;
+                robot.log(String.format(
+                        "[AMaker] %02d: PoseCmd (%.1f, %.1f, %.1f)",
+                        i, p.getX(), p.getY(), Math.toDegrees(p.getHeading())
+                ));
+            }
+            else if (cmd instanceof PathChainCmd) {
+                robot.log(String.format(
+                        "[AMaker] %02d: PathChainCmd (%s)",
+                        i, ((PathChainCmd) cmd).pathChain
+                ));
+            }
+            else if (cmd instanceof ActionCmd) {
+                robot.log(String.format(
+                        "[AMaker] %02d: ActionCmd (%s)",
+                        i, ((ActionCmd) cmd).name()
+                ));
+            }
+            else {
+                robot.log(String.format(
+                        "[AMaker] %02d: UNKNOWN CMD (%s)",
+                        i, cmd.getClass().getSimpleName()
+                ));
+            }
         }
 
-        return new Sequence(commandList);
+        robot.log("[AMaker] ==========================");
     }
+
 
     private boolean waitingForPath = false;
     private boolean waitingForLauncher = false;
     private int commandIndex = 0;
+
+    public int getCommandIndex() {return commandIndex;}
 
     /**
      * @implNote Call after each follower update in OpMode loop.
      * @param sequence a sequence of auto commands
      */
     public void updateSequence(Sequence sequence) {
+        log("update");
+        log("cmd index = " + commandIndex);
 
         // Don’t advance if waiting on something
-        if (waitingForPath && follower.isBusy()) return;
-        if (waitingForLauncher && robot.launcherThread.isBusy()) return;
+        if (waitingForPath && follower.isBusy()) {
+            log("Waiting for path");
+            return;
+        }
+        if (waitingForLauncher && robot.launcherThread.isBusy()) {
+            log("Waiting for launcher");
+            return;
+        }
 
         // Clear waits once done
         waitingForPath = false;
         waitingForLauncher = false;
 
-        if (commandIndex >= sequence.getCommands().size()) return;
+        if (commandIndex >= sequence.getCommands().size()) {
+            log("Finished all commands");
+            return;
+        }
 
         AutoCommand cmd = sequence.getCommands().get(commandIndex);
 
         if (cmd instanceof PoseCmd) { // StartPose or Pose Resetting
             PoseCmd poseCmd = (PoseCmd) cmd;
             follower.setPose(poseCmd.pose);
+            log("Starting pose set to " + poseCmd.pose);
             commandIndex++;
 
         } else if (cmd instanceof PathChainCmd) {
             PathChainCmd pathCmd = (PathChainCmd) cmd;
             follower.followPath(pathCmd.pathChain);
+            log("Following path " + pathCmd.pathChain.toString());
             waitingForPath = true;
             commandIndex++;
 
         } else if (cmd instanceof ActionCmd) {
             ActionCmd actionCmd = (ActionCmd) cmd;
             runAction(actionCmd);
+            log("Running action " + actionCmd.name());
             if (actionCmd == ActionCmd.LAUNCH) {
                 waitingForLauncher = true;
             }
             commandIndex++;
         }
+    }
+
+    private void log(String msg) {
+        robot.log("[AMaker] " + msg);
     }
 }
