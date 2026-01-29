@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.robot;
+package org.firstinspires.ftc.teamcode.util.tuners;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
@@ -8,6 +8,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.robot.configuration.AimAssist;
+import org.firstinspires.ftc.teamcode.robot.configuration.Config;
 
 @TeleOp(name="HeadingPID TeleOp", group="Drive")
 public class HeadingPIDTuner extends LinearOpMode {

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.robot; // make sure this aligns with class location
+package org.firstinspires.ftc.teamcode.robot.autons; // make sure this aligns with class location
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
@@ -12,9 +12,10 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.robot.configuration.Config;
 
-@Autonomous(name = "Blue Far Auto")
-public class BlueFarAuto extends OpMode {
+@Autonomous(name = "Blue Close Auto")
+public class BlueCloseAuto extends OpMode {
 
     Config robot;
 
@@ -27,7 +28,7 @@ public class BlueFarAuto extends OpMode {
 
     //double parkTime = 25;
 
-    private final Pose startPose = new Pose(56, 12, Math.toRadians(90)); // Start Pose of robot.
+    private final Pose startPose = new Pose(22.49, 121.03, Math.toRadians(141.10)); // Start Pose of robot.
 
 
     private int pathState;
@@ -45,14 +46,14 @@ public class BlueFarAuto extends OpMode {
         final Pose scorePosePark = new Pose(53, 115, robot.aimAssist.getHeadingForTarget(new Pose(53,115), robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
 
         final Pose toPickup1Pose = new Pose(50, 84, Math.toRadians(180)); // Highest (First Set) of Artifacts from the Spike Mark.
-        final Pose pickup1Pose = new Pose(18, 84, Math.toRadians(180)); // !!!!!
+        final Pose pickup1Pose = new Pose(19, 84, Math.toRadians(180)); // !!!!!
 
         final Pose toPickup2Pose = new Pose(50, 61, Math.toRadians(180)); // Middle (Second Set) of Artifacts from the Spike Mark.
-        final Pose pickup2Pose = new Pose(11, 61, Math.toRadians(180)); // !!!!!
+        final Pose pickup2Pose = new Pose(12, 61, Math.toRadians(180)); // !!!!!
         final Pose exitGrabPickup2Pose = new Pose(50, 63, Math.toRadians(180));
 
         final Pose toPickup3Pose = new Pose(50, 37, Math.toRadians(180)); // Middle (Second Set) of Artifacts from the Spike Mark.
-        final Pose pickup3Pose = new Pose(11, 37, Math.toRadians(180)); // !!!!!
+        final Pose pickup3Pose = new Pose(12, 37, Math.toRadians(180)); // !!!!!
         final Pose exitGrabPickup3Pose = new Pose(50, 38, Math.toRadians(180));
 
         /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
@@ -272,9 +273,9 @@ public class BlueFarAuto extends OpMode {
     @Override
     public void init() {
 
-        robot = new Config(this,follower);
+        robot = new Config(this, follower);
         robot.init();
-        setOpModeIsActive(true);
+        robot.setOpModeIsActive(true);
 
         robot.setAlliance(Config.Alliance.BLUE);
 
@@ -305,7 +306,7 @@ public class BlueFarAuto extends OpMode {
     @Override
     public void start() {
         runtime.reset();
-        setOpModeIsActive(true);
+        robot.setOpModeIsActive(true);
         opmodeTimer.resetTimer();
         setPathState(0);
     }
@@ -316,13 +317,10 @@ public class BlueFarAuto extends OpMode {
     @Override
     public void stop() {
         robot.savePoseToFile(follower.getPose());
-        setOpModeIsActive(false);
+        robot.setOpModeIsActive(false);
 
     }
 
-    public void setOpModeIsActive(boolean value) {
-        robot.opModeIsActive = value;
-    }
 
     private void log(String message) {
         robot.log("[RedFarAuto] - " + message);
