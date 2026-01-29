@@ -918,35 +918,6 @@ class Limelight {
         return lastTx;
     }
 
-    public GoalResults scanGoalAngle() {
-        int selectedPipeline;
-
-        startLimelight();
-
-        if(robot.alliance == Config.Alliance.BLUE) {
-            changePipeline(Pipeline.BLUE_GOAL);
-        }
-        else {
-            changePipeline(Pipeline.RED_GOAL);
-        }
-
-        // Get latest results
-        LLResult result = robot.limelightCamera.getLatestResult();
-
-        GoalResults goalResults = new GoalResults();
-        // Update angles
-        if (result != null && result.isValid()) {
-            goalResults.setResults(true,result.getTx(),
-                    result.getTy(),result.getBotposeAvgDist());
-        }
-        else {
-            goalResults.setGoalAnglesAreValid(false);
-        }
-
-        return goalResults;
-
-    }
-
     private void log(String message) {
         robot.log("[Limelight] - " + message);
     }
