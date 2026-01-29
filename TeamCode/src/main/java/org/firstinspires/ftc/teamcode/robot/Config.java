@@ -953,27 +953,6 @@ class Limelight {
 
 }
 
-class GoalResults {
-    boolean goalAnglesAreValid = false;
-    double goalTx;
-    double goalTy;
-    double goalAvgDist;
-
-    public void setResults(boolean validity, double goalTx, double goalTy, double goalAvgDist) {
-        goalAnglesAreValid = validity;
-        this.goalTx = goalTx;
-        this.goalTy = goalTy;
-        this.goalAvgDist = goalAvgDist;
-    }
-    public void setGoalAnglesAreValid(boolean validity) {
-        goalAnglesAreValid = validity;
-    }
-    public void setGoalTx(double goalTx) {this.goalTx = goalTx;}
-    public void setGoalTy(double goalTy) {this.goalTy = goalTy;}
-    public void setGoalAvgDist(double goalAvgDist) {this.goalAvgDist = goalAvgDist;}
-
-}
-
 class AimAssist {
 
     private ElapsedTime runtime = new ElapsedTime(ElapsedTime.Resolution.SECONDS);
@@ -987,7 +966,6 @@ class AimAssist {
     private double scaleFactor = 0.05;
     private boolean simpleMode = false;
 
-    GoalResults goalAngles = new GoalResults();
 
     private enum Poses {
         CLOSE_LAUNCH_1(new Pose(0,0,0)),
