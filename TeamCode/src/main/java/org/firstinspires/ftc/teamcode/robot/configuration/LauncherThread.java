@@ -147,6 +147,12 @@ public class LauncherThread extends Thread {
                 robot.activateKicker();
                 robot.waitForKicker();
             }
+            if (artifactsToLaunch == 1) {
+                robot.agitator.setPower(0);
+                //robot.intakeMotor.setVelocity(); // designed for power not vel
+                robot.storeKicker();
+                robot.waitForKicker();
+            }
 
             // Go to IDLE mode
             idleLauncher();

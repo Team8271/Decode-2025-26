@@ -94,12 +94,13 @@ public class Config {
     }
 
     public enum Alliance {
-        RED(new Pose(144,144)),
-        BLUE(new Pose(0, 144));
+        RED(new Pose(138,138)),
+        BLUE(new Pose(6, 138));
 
         private final Pose alliance;
         Alliance(Pose alliance) { this.alliance = alliance; }
         public Pose getPose() { return alliance; }
+        public Pose getLogoPose() { return alliance; } // Not set up yet
     }
 
     public enum DriverAmount {
@@ -240,7 +241,7 @@ public class Config {
         checkAndRestartThreads();
 
         // Aim Assist
-        aimAssist = new AimAssist(this,1.5,0,0,0.6);
+        aimAssist = new AimAssist(this,4,0,0.3,0.01);
 
         // Limelight3A Camera
         limelightCamera = hwMap.get(Limelight3A.class, "limelight");
@@ -274,9 +275,9 @@ public class Config {
         log("Robot Initialized");
     }
 
-    public void aimAssistInit() {
+    /*public void aimAssistInit() {
         aimAssist = new AimAssist(this,1.5,0,0,0.6);
-    }
+    }*/
 
     /** Initializes TweetyBird.
      * @deprecated In favor of Pedro-Pathing

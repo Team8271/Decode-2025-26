@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.robot.autons; // make sure this aligns with class location
+package org.firstinspires.ftc.teamcode.robot.autons.old; // make sure this aligns with class location
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
@@ -14,8 +14,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.configuration.Config;
 
-@Autonomous(name = "Red Far Auto")
-public class RedFarAuto extends OpMode {
+@Autonomous(name = "Red Close Auto")
+public class RedCloseAuto extends OpMode {
 
     Config robot;
 
@@ -27,9 +27,9 @@ public class RedFarAuto extends OpMode {
     private Timer pathTimer, actionTimer, opmodeTimer;
 
     //double parkTime = 25;
-
-    private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
-
+//117.11,130.67,39.77 <- old
+    private final Pose startPose = new Pose(126.32, 120.29, Math.toRadians(38.50)); // Start Pose of robot.
+//126.32, 120.29, 38.50
 
     private int pathState;
 
@@ -52,8 +52,8 @@ public class RedFarAuto extends OpMode {
         final Pose pickup2Pose = new Pose(133, 59, Math.toRadians(360)); // !!!!!
         final Pose exitGrabPickup2Pose = new Pose(94,63, Math.toRadians(360));
 
-        final Pose toPickup3Pose = new Pose(94, 34, Math.toRadians(360)); // Middle (Second Set) of Artifacts from the Spike Mark.
-        final Pose pickup3Pose = new Pose(133, 34, Math.toRadians(360)); // !!!!!
+        final Pose toPickup3Pose = new Pose(94, 35, Math.toRadians(360)); // Middle (Second Set) of Artifacts from the Spike Mark.
+        final Pose pickup3Pose = new Pose(133, 35, Math.toRadians(360)); // !!!!!
         final Pose exitGrabPickup3Pose = new Pose(94,38, Math.toRadians(360));
 
         /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
@@ -273,7 +273,7 @@ public class RedFarAuto extends OpMode {
     @Override
     public void init() {
 
-        robot = new Config(this,follower);
+        robot = new Config(this, follower);
         robot.init();
         robot.setOpModeIsActive(true);
 
@@ -320,7 +320,6 @@ public class RedFarAuto extends OpMode {
         robot.setOpModeIsActive(false);
 
     }
-
 
     private void log(String message) {
         robot.log("[RedFarAuto] - " + message);

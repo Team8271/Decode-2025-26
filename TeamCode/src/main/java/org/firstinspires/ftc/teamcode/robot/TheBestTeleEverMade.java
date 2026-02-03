@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.robot;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -9,16 +10,22 @@ import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.configuration.*;
-
+import org.firstinspires.ftc.teamcode.util.Poses;
+//@Configurable
 @TeleOp(name = "! TheBestTeleEverMade !")
 public class TheBestTeleEverMade extends LinearOpMode {
     Config robot;
     private Follower follower;
     //private Pose startPose; // Start Pose of robot.
-    private Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Red Far if no pose in file
+    private Pose startPose = Poses.Blue.farStart; // Blue Far if no saved pose
     ElapsedTime runtime = new ElapsedTime();
     double lastAACalcTime = 0;
     double lastLauncherCalcTime = 0;
+
+    public static double kP = 4;
+    public static double kI = 0;
+    public static double kD = 0.3;
+    public static double kF = 0.01;
 
 
     // TODO: Limelight pose updating
@@ -42,7 +49,8 @@ public class TheBestTeleEverMade extends LinearOpMode {
         follower.update();
 
         robot.init();
-        robot.setAlliance(robot.readAllianceFromFile());
+        //dev !! robot.setAlliance(robot.readAllianceFromFile());
+        robot.setAlliance(Config.Alliance.BLUE);
 
         //TODO: Not working, Seems Red/Blue flipped
         //resetPose(0, 0, robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180));
@@ -85,6 +93,8 @@ public class TheBestTeleEverMade extends LinearOpMode {
             double lateral = Math.sin(targetRadians)*gamepadHypot;
             double axial = Math.cos(targetRadians)*gamepadHypot;
 
+            //robot.aimAssist.headingPIDF.setCoefficient(kP,kI,kD,kF);
+
             if (enableAimAssist) {
                 aimAssist = true;
             }
@@ -120,7 +130,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
                     telemetry.addData("AA ERROR", error);
 
-                    yawControl = robot.aimAssist.headingPID.calculate(error);
+                    yawControl = robot.aimAssist.headingPIDF.calculate(error);
 
                     // Drive
                     setTeleOpDrive(axial, lateral, yawControl, throttle, false);
@@ -132,7 +142,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
             }
             else {
                 // Driver 1 Controlling
-                robot.aimAssist.headingPID.reset();
+                robot.aimAssist.headingPIDF.reset();
 
                 // Drive
                 setTeleOpDrive(axial, lateral, yawControl, throttle, true);

@@ -75,12 +75,11 @@ public class AimAssist {
 
     Config robot;
 
-    public HeadingPID headingPID;
+    public HeadingPIDF headingPIDF;
 
-    public AimAssist(Config robot, double kP, double kI, double kD, double maxPower) {
+    public AimAssist(Config robot, double kP, double kI, double kD, double kF) {
         this.robot = robot;
-        headingPID = new HeadingPID(kP, kI, kD);
-        headingPID.setOutputLimits(maxPower);
+        headingPIDF = new HeadingPIDF(kP, kI, kD, kF);
         log("Ready.");
     }
 
@@ -101,6 +100,12 @@ public class AimAssist {
 
         if (simpleMode) {
             return (robot.alliance == Config.Alliance.RED ? 35 : 135);
+        }
+
+        // Heading to swap to non-FTC logo side for backboard shots
+        double adjustOuter = Math.toRadians(135); // Use Alliance ? heading1 : heading2 for team specifics
+        if (currentPose.getHeading() > adjustOuter) {
+
         }
 
         // Robot's current state
@@ -125,6 +130,48 @@ public class AimAssist {
     }
 
     /**
+     * Calculates desired heading to face a position on a pedro-field. <break></break>
+     * <b>Simple Mode:</b> returns BLUE=135deg  RED=35deg (In Radians)
+     * @param currentPose Robot current position on the field <b>(must be correct)</b>
+     * @return The correct heading in radians to face the target Pose
+     * @SimpleMode returns BLUE=135deg  RED=35deg (In Radians)
+     */
+ /*   public double getGoalHeading(Pose currentPose) {
+
+        if (simpleMode) {
+            return (robot.alliance == Config.Alliance.RED ? 35 : 135);
+        }
+
+        //Pose targetToFace = 
+
+        // Heading to swap to non-FTC logo side for backboard shots
+        double adjustOuter = Math.toRadians(135); // Use Alliance ? heading1 : heading2 for team specifics
+        if (currentPose.getHeading() > adjustOuter) {
+
+        }
+
+        // Robot's current state
+        double robotX = currentPose.getX();
+        double robotY = currentPose.getY();
+        double currentZ = currentPose.getHeading(); // Heading in radians
+
+        // Target coordinates
+        double targetX = targetToFace.getX();
+        double targetY = targetToFace.getY();
+
+        // Calculate the target heading in the field frame
+        double deltaX = targetX - robotX;
+        double deltaY = targetY - robotY;
+        double targetHeading = Math.atan2(deltaY, deltaX);
+
+        //log("target to face " + targetToFace);
+        //log("getHeadingForTarget yields " + targetHeading);
+        if (Math.toDegrees(targetHeading) < 13) {targetHeading = 1;}
+        if (Math.toDegrees(targetHeading) > 167) {targetHeading = 179;}
+        return targetHeading;
+    }
+*/
+    /**
      * Wraps angles (Radians).
      * @param angle Radian angle.
      * @return Normalized angle between -pi and pi.
@@ -148,11 +195,12 @@ public class AimAssist {
         }
     }
 
-    public class HeadingPID {
+    public class HeadingPIDF {
 
         private double kP;
         private double kI;
         private double kD;
+        private double kF; // feedforward gain
 
         private double integralSum = 0.0;
         private double lastError = 0.0;
@@ -161,11 +209,19 @@ public class AimAssist {
         private double minOutput = -1.0;
         private double maxOutput = 1.0;
 
-        public HeadingPID(double kP, double kI, double kD) {
+        public HeadingPIDF(double kP, double kI, double kD, double kF) {
             this.kP = kP;
             this.kI = kI;
             this.kD = kD;
+            this.kF = kF;
             lastTime = System.nanoTime();
+        }
+
+        public void setCoefficient(double kP, double kI, double kD, double kF) {
+            this.kP = kP;
+            this.kI = kI;
+            this.kD = kD;
+            this.kF = kF;
         }
 
         public void setOutputLimits(double max) {
@@ -180,9 +236,7 @@ public class AimAssist {
         }
 
         /**
-         *
          * @param error Distance in radians from target heading (AutoWrapped)
-         * @apiNote Use AimAssist's getHeadingForTarget() for calculating error
          * @return A value between -1 and 1 used for yaw motions
          */
         public double calculate(double error) {
@@ -193,18 +247,28 @@ public class AimAssist {
             double deltaTime = (now - lastTime) / 1e9;
             lastTime = now;
 
+            // PID terms
             integralSum += error * deltaTime;
             double derivative = deltaTime > 0 ? (error - lastError) / deltaTime : 0.0;
             lastError = error;
 
-            double output = (kP * error) + (kI * integralSum) + (kD * derivative);
+            double pTerm = kP * error;
+            double iTerm = kI * integralSum;
+            double dTerm = kD * derivative;
 
+            // Feedforward (static friction compensation)
+            double fTerm = kF * Math.signum(error);
+
+            double output = pTerm + iTerm + dTerm + fTerm;
+
+            // Clamp output
             if (output > maxOutput) output = maxOutput;
             if (output < minOutput) output = minOutput;
 
             return output;
         }
     }
+
 
     /**
      * Sets robot ideal launch velocity for current position
@@ -221,7 +285,7 @@ public class AimAssist {
 
         // Distance from target represented as x
         double x = robot.aimAssist.getPoseDistance(currentPose, targetPose);
-        double idealLauncherVelocity = (0.0197859*x*x)+(1.33493*x)+967.92439; // Not using Math.pow for speed sake
+        double idealLauncherVelocity = (0.0182942*x*x)+(1.3243*x)+1130.37088; // Not using Math.pow for speed sake
         log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
 
         return idealLauncherVelocity;

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.robot.autons; // make sure this aligns with class location
+package org.firstinspires.ftc.teamcode.robot.autons.old;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
@@ -14,8 +14,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.configuration.Config;
 
-@Autonomous(name = "Red Close Auto")
-public class RedCloseAuto extends OpMode {
+@Autonomous(name = "Blue Far Auto")
+public class BlueFarAuto extends OpMode {
 
     Config robot;
 
@@ -27,9 +27,9 @@ public class RedCloseAuto extends OpMode {
     private Timer pathTimer, actionTimer, opmodeTimer;
 
     //double parkTime = 25;
-//117.11,130.67,39.77 <- old
-    private final Pose startPose = new Pose(126.32, 120.29, Math.toRadians(38.50)); // Start Pose of robot.
-//126.32, 120.29, 38.50
+
+    private final Pose startPose = new Pose(56, 12, Math.toRadians(90)); // Start Pose of robot.
+
 
     private int pathState;
 
@@ -42,19 +42,19 @@ public class RedCloseAuto extends OpMode {
 
     public void buildPaths() {
 
-        final Pose scorePose = new Pose(94, 100, robot.aimAssist.getHeadingForTarget(new Pose(94,100),robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
-        final Pose scorePosePark = new Pose(94, 110, robot.aimAssist.getHeadingForTarget(new Pose(94,110), robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
+        final Pose scorePose = new Pose(50, 100, robot.aimAssist.getHeadingForTarget(new Pose(50,100), robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
+        final Pose scorePosePark = new Pose(53, 115, robot.aimAssist.getHeadingForTarget(new Pose(53,115), robot.alliance.getPose())); // Scoring Pose of robot. It is facing the goal at a 144 degree angle.
 
-        final Pose toPickup1Pose = new Pose(94, 84, Math.toRadians(360)); // Highest (First Set) of Artifacts from the Spike Mark.
-        final Pose pickup1Pose = new Pose(126, 84, Math.toRadians(360)); // !!!!!
+        final Pose toPickup1Pose = new Pose(50, 84, Math.toRadians(180)); // Highest (First Set) of Artifacts from the Spike Mark.
+        final Pose pickup1Pose = new Pose(18, 84, Math.toRadians(180)); // !!!!!
 
-        final Pose toPickup2Pose = new Pose(94, 59, Math.toRadians(360)); // Middle (Second Set) of Artifacts from the Spike Mark.
-        final Pose pickup2Pose = new Pose(133, 59, Math.toRadians(360)); // !!!!!
-        final Pose exitGrabPickup2Pose = new Pose(94,63, Math.toRadians(360));
+        final Pose toPickup2Pose = new Pose(50, 61, Math.toRadians(180)); // Middle (Second Set) of Artifacts from the Spike Mark.
+        final Pose pickup2Pose = new Pose(11, 61, Math.toRadians(180)); // !!!!!
+        final Pose exitGrabPickup2Pose = new Pose(50, 63, Math.toRadians(180));
 
-        final Pose toPickup3Pose = new Pose(94, 35, Math.toRadians(360)); // Middle (Second Set) of Artifacts from the Spike Mark.
-        final Pose pickup3Pose = new Pose(133, 35, Math.toRadians(360)); // !!!!!
-        final Pose exitGrabPickup3Pose = new Pose(94,38, Math.toRadians(360));
+        final Pose toPickup3Pose = new Pose(50, 37, Math.toRadians(180)); // Middle (Second Set) of Artifacts from the Spike Mark.
+        final Pose pickup3Pose = new Pose(11, 37, Math.toRadians(180)); // !!!!!
+        final Pose exitGrabPickup3Pose = new Pose(50, 38, Math.toRadians(180));
 
         /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
         scorePreload = new Path(new BezierLine(startPose, scorePose));
@@ -273,11 +273,11 @@ public class RedCloseAuto extends OpMode {
     @Override
     public void init() {
 
-        robot = new Config(this, follower);
+        robot = new Config(this,follower);
         robot.init();
         robot.setOpModeIsActive(true);
 
-        robot.setAlliance(Config.Alliance.RED);
+        robot.setAlliance(Config.Alliance.BLUE);
 
         pathTimer = new Timer();
         opmodeTimer = new Timer();

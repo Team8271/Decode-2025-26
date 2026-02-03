@@ -18,6 +18,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.configuration.Config;
+import org.firstinspires.ftc.teamcode.util.Poses;
 
 @TeleOp(name = "!!FlywheelTuner!!")
 public class FlywheelPFTuner extends OpMode {
@@ -26,7 +27,7 @@ public class FlywheelPFTuner extends OpMode {
     Config robot;
     private Follower follower;
 
-    private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
+    private final Pose startPose = Poses.Blue.farStart; // Start Pose of robot.
 
     public double highVelocity = 1500;
     public double lowVelocity = 900;
@@ -63,14 +64,17 @@ public class FlywheelPFTuner extends OpMode {
     public void init() {
 
         robot = new Config(this);
-        robot.aimAssistInit();
-        robot.alliance = Config.Alliance.RED;
+        //robot.aimAssistInit();
+        robot.init();
 
-        initLL();
+        robot.alliance = Config.Alliance.BLUE;
+
+        //initLL();
 
         follower = Constants.createFollower(hardwareMap);
         follower.setPose(startPose);
         follower.update();
+
 
         // Modified Robot Launcher Motor
         flywheelMotor = hardwareMap.get(DcMotorEx.class, "launcher");
@@ -102,6 +106,57 @@ public class FlywheelPFTuner extends OpMode {
     @Override
     public void loop() {
         follower.update();
+
+        /* Stolen Code from Examples
+        // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
+        double axial   = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
+        double lateral =  gamepad1.left_stick_x;
+        double yaw     =  gamepad1.right_stick_x;
+
+        // Combine the joystick requests for each axis-motion to determine each wheel's power.
+        // Set up a variable for each drive wheel to save the power level for telemetry.
+        double frontLeftPower  = axial + lateral + yaw;
+        double frontRightPower = axial - lateral - yaw;
+        double backLeftPower   = axial - lateral + yaw;
+        double backRightPower  = axial + lateral - yaw;
+
+        // Normalize the values so no wheel power exceeds 100%
+        // This ensures that the robot maintains the desired motion.
+        double max = Math.max(Math.abs(frontLeftPower), Math.abs(frontRightPower));
+        max = Math.max(max, Math.abs(backLeftPower));
+        max = Math.max(max, Math.abs(backRightPower));
+
+        if (max > 1.0) {
+            frontLeftPower  /= max;
+            frontRightPower /= max;
+            backLeftPower   /= max;
+            backRightPower  /= max;
+        }
+
+        // This is test code:
+        //
+        // Uncomment the following code to test your motor directions.
+        // Each button should make the corresponding motor run FORWARD.
+        //   1) First get all the motors to take to correct positions on the robot
+        //      by adjusting your Robot Configuration if necessary.
+        //   2) Then make sure they run in the correct direction by modifying the
+        //      the setDirection() calls above.
+        // Once the correct motors move in the correct direction re-comment this code.
+
+            /*
+            frontLeftPower  = gamepad1.x ? 1.0 : 0.0;  // X gamepad
+            backLeftPower   = gamepad1.a ? 1.0 : 0.0;  // A gamepad
+            frontRightPower = gamepad1.y ? 1.0 : 0.0;  // Y gamepad
+            backRightPower  = gamepad1.b ? 1.0 : 0.0;  // B gamepad
+            /
+
+        // Send calculated power to wheels
+        robot.fl.setPower(frontLeftPower);
+        robot.fr.setPower(frontRightPower);
+        robot.bl.setPower(backLeftPower);
+        robot.br.setPower(backRightPower);
+
+        // End of stolen code*/
 
         if (gamepad1.yWasPressed()) {
             if (curTargetVelocity == highVelocity) {
@@ -228,7 +283,7 @@ public class FlywheelPFTuner extends OpMode {
     }
 
     public void updateLLResults() {
-        result = limelight.getLatestResult();
+        result = null;//limelight.getLatestResult();
 
         if (result != null && result.isValid()) {
             valid = true;

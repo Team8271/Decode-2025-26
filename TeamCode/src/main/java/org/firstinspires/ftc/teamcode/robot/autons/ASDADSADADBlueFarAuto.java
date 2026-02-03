@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.robot.autons; // make sure this aligns with class location
+package org.firstinspires.ftc.teamcode.robot.autons;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.configuration.Config;
 
 @Autonomous(name = "Blue Far Auto")
-public class BlueFarAuto extends OpMode {
+public class ASDADSADADBlueFarAuto extends OpMode {
 
     Config robot;
 
@@ -24,12 +24,8 @@ public class BlueFarAuto extends OpMode {
     boolean waitingForLauncher = false;
 
     private Follower follower;
-    private Timer pathTimer, actionTimer, opmodeTimer;
-
-    //double parkTime = 25;
 
     private final Pose startPose = new Pose(56, 12, Math.toRadians(90)); // Start Pose of robot.
-
 
     private int pathState;
 
@@ -123,12 +119,6 @@ public class BlueFarAuto extends OpMode {
                 setPathState(1);
                 break;
             case 1:
-
-            /* You could check for
-            - Follower State: "if(!follower.isBusy()) {}"
-            - Time: "if(pathTimer.getElapsedTimeSeconds() > 1) {}"
-            - Robot Position: "if(follower.getPose().getX() > 36) {}"
-            */
 
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
                 if (!follower.isBusy()) {
@@ -241,7 +231,6 @@ public class BlueFarAuto extends OpMode {
      **/
     public void setPathState(int pState) {
         pathState = pState;
-        pathTimer.resetTimer();
     }
 
     /**
@@ -279,9 +268,6 @@ public class BlueFarAuto extends OpMode {
 
         robot.setAlliance(Config.Alliance.BLUE);
 
-        pathTimer = new Timer();
-        opmodeTimer = new Timer();
-        opmodeTimer.resetTimer();
 
 
         follower = Constants.createFollower(hardwareMap);
@@ -307,7 +293,6 @@ public class BlueFarAuto extends OpMode {
     public void start() {
         runtime.reset();
         robot.setOpModeIsActive(true);
-        opmodeTimer.resetTimer();
         setPathState(0);
     }
 

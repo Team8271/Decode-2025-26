@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.configuration.AimAssist;
 import org.firstinspires.ftc.teamcode.robot.configuration.Config;
+import org.firstinspires.ftc.teamcode.util.Poses;
 
 @TeleOp(name="HeadingPID TeleOp", group="Drive")
 public class HeadingPIDTuner extends LinearOpMode {
@@ -35,13 +36,14 @@ public class HeadingPIDTuner extends LinearOpMode {
 
 
         follower = Constants.createFollower(hardwareMap);
-        follower.setStartingPose(startPose == null ? new Pose() : startPose);
+        follower.setStartingPose(Poses.Blue.farStart);
         follower.update();
 
-        Pose targetGoal = new Pose(144,144);
+        //double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),robot.alliance.getPose());
+        double headingCalc = follower.getHeading();
 
-        HeadingPID headingPID = new HeadingPID(1.5, 0.0, 0.0);
-        headingPID.setOutputLimits(-0.8, 0.8);
+
+        HeadingPIDF headingPID = new HeadingPIDF(1.5, 0.0, 0.0,0.01);
 
         telemetry.addLine("Waiting for Start");
         telemetry.update();
@@ -49,6 +51,8 @@ public class HeadingPIDTuner extends LinearOpMode {
         waitForStart();
 
         targetHeading = getHeading();
+        boolean throttleEffectsYaw = true;
+
 
         while (opModeIsActive()) {
             follower.update();
@@ -65,44 +69,46 @@ public class HeadingPIDTuner extends LinearOpMode {
             double lateral = Math.sin(targetRadians)*gamepadHypot;
             double axial = Math.cos(targetRadians)*gamepadHypot;
 
+
             // Manual yaw override
             if (Math.abs(yawControl) > 0.05) {
-                targetHeading = getHeading();
-                headingPID.reset();
+                throttleEffectsYaw = true;
             }
             else {
                 // Run intensive calculations every delay seconds
                 double delay = 20;
                 if (runtime.milliseconds() > lastAACalcTime + delay) {
-                    double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),robot.alliance.getPose());
 
                     double error = follower.getHeading()-headingCalc;
 
-                    telemetry.addData("AA ERROR", error);
+                    //telemetry.addData("AA ERROR", error);
 
-                    yawControl = robot.aimAssist.headingPID.calculate(error);
+                    yawControl = robot.aimAssist.headingPIDF.calculate(error);
 
-                    // Drive
-                    setTeleOpDrive(axial, lateral, yawControl, throttle, false);
+                    throttleEffectsYaw = false;
 
                     lastAACalcTime = runtime.milliseconds();
                 }
             }
 
-            // Drive
-            setTeleOpDrive(axial, lateral, yawControl, throttle, false);
+            setTeleOpDrive(axial, lateral, yawControl, throttle, throttleEffectsYaw);
+
 
             // ---- PID Tuning via Gamepad ----
-            if (gamepad1.dpad_up)    headingPID.kP += 0.001;
-            if (gamepad1.dpad_down)  headingPID.kP -= 0.001;
-            if (gamepad1.dpad_right) headingPID.kD += 0.0005;
-            if (gamepad1.dpad_left)  headingPID.kD -= 0.0005;
-            if (gamepad1.y)          headingPID.kI += 0.0001;
-            if (gamepad1.a)          headingPID.kI -= 0.0001;
+            if (gamepad1.dpad_up)    headingPID.kP += 0.01;
+            if (gamepad1.dpad_down)  headingPID.kP -= 0.01;
+            if (gamepad1.dpad_right) headingPID.kD += 0.005;
+            if (gamepad1.dpad_left)  headingPID.kD -= 0.005;
+            if (gamepad1.y)          headingPID.kI += 0.001;
+            if (gamepad1.a)          headingPID.kI -= 0.001;
+            if (gamepad2.dpadUpWasPressed())    headingPID.kF += 0.01;
+            if (gamepad2.dpadDownWasPressed())    headingPID.kF -= 0.01;
+
 
             telemetry.addData("kP", headingPID.kP);
             telemetry.addData("kI", headingPID.kI);
             telemetry.addData("kD", headingPID.kD);
+            telemetry.addData("kF", headingPID.kF);
             telemetry.addData("Yaw Correction", yawControl);
             telemetry.addData("Target Heading", targetHeading);
             telemetry.addData("Current Heading", getHeading());
@@ -136,11 +142,12 @@ public class HeadingPIDTuner extends LinearOpMode {
         robot.br.setPower(rightBackPower / max);
     }
 
-    class HeadingPID {
+    public class HeadingPIDF {
 
         private double kP;
         private double kI;
         private double kD;
+        private double kF; // feedforward gain
 
         private double integralSum = 0.0;
         private double lastError = 0.0;
@@ -149,15 +156,16 @@ public class HeadingPIDTuner extends LinearOpMode {
         private double minOutput = -1.0;
         private double maxOutput = 1.0;
 
-        public HeadingPID(double kP, double kI, double kD) {
+        public HeadingPIDF(double kP, double kI, double kD, double kF) {
             this.kP = kP;
             this.kI = kI;
             this.kD = kD;
+            this.kF = kF;
             lastTime = System.nanoTime();
         }
 
-        public void setOutputLimits(double min, double max) {
-            minOutput = min;
+        public void setOutputLimits(double max) {
+            minOutput = -max;
             maxOutput = max;
         }
 
@@ -168,7 +176,6 @@ public class HeadingPIDTuner extends LinearOpMode {
         }
 
         /**
-         *
          * @param error Distance in radians from target heading (AutoWrapped)
          * @return A value between -1 and 1 used for yaw motions
          */
@@ -180,16 +187,26 @@ public class HeadingPIDTuner extends LinearOpMode {
             double deltaTime = (now - lastTime) / 1e9;
             lastTime = now;
 
+            // PID terms
             integralSum += error * deltaTime;
             double derivative = deltaTime > 0 ? (error - lastError) / deltaTime : 0.0;
             lastError = error;
 
-            double output = (kP * error) + (kI * integralSum) + (kD * derivative);
+            double pTerm = kP * error;
+            double iTerm = kI * integralSum;
+            double dTerm = kD * derivative;
 
+            // Feedforward (static friction compensation)
+            double fTerm = kF * Math.signum(error);
+
+            double output = pTerm + iTerm + dTerm + fTerm;
+
+            // Clamp output
             if (output > maxOutput) output = maxOutput;
             if (output < minOutput) output = minOutput;
 
             return output;
         }
     }
+
 }
