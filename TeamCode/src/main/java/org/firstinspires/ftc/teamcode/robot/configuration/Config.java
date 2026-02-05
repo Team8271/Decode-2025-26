@@ -4,17 +4,16 @@ import android.util.Log;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ReadWriteFile;
 
@@ -51,12 +50,14 @@ public class Config {
     public final int motorRampUpTime = 3000;
 
     public boolean devBool = false;
+    private boolean brakesActive = false;
 
     // This value will be changed with Limelight sensing to get the ideal power
     public double idealLauncherVelocity = 1225, idleLauncherVelocity = 900;
 
     private double  desiredLeftKickerPosition = storeLeftKickerPosition,
-                    desiredIntakeLimiterPosition = intakeLimServerActivePosition;
+                    desiredIntakeLimiterPosition = intakeLimServerActivePosition,
+                    brakeOn = 0, brakeOff = 0.5;
 
     // Reference to opMode class
     public final LinearOpMode linearOpMode;
@@ -71,8 +72,11 @@ public class Config {
             agitator, launcherMotor, intakeMotor;
 
     // Define Servos
-    private Servo leftKickerServo, rightKickerServo, intakeLimServo;
+    private Servo leftKickerServo, rightKickerServo, intakeLimServo, leftBrake, rightBrake;
     public Servo indicatorLight;
+
+    private DigitalChannel redLED;
+    private DigitalChannel greenLED;
 
     // Other Hardware
     public Limelight3A limelightCamera;
@@ -226,6 +230,16 @@ public class Config {
         // IntakeLimiterServo
         intakeLimServo = hwMap.get(Servo.class, "intakeLimServo");
         intakeLimServo.setPosition(intakeLimServerActivePosition);
+        // Brakes
+        leftBrake = hwMap.get(Servo.class, "leftBrake");
+        rightBrake = hwMap.get(Servo.class, "rightBrake");
+        leftBrake.setPosition(brakeOff);
+        rightBrake.setPosition(brakeOff);
+
+        redLED = hwMap.get(DigitalChannel.class, "red");
+        greenLED = hwMap.get(DigitalChannel.class, "green");
+        redLED.setMode(DigitalChannel.Mode.OUTPUT);
+        greenLED.setMode(DigitalChannel.Mode.OUTPUT);
 
         // Light
         indicatorLight = hwMap.get(Servo.class, "bigStupidLight");
@@ -558,6 +572,41 @@ public class Config {
     public void stopIntakeAssembly() {
         intakeMotor.setVelocity(intakeMotorOffVelocity);
         agitator.setPower(0);
+    }
+
+    public void activateBrakes() {
+        leftBrake.setPosition(brakeOn);
+        rightBrake.setPosition(brakeOn);
+
+        brakesActive = true;
+    }
+
+    public void deactivateBrakes() {
+        leftBrake.setPosition(brakeOff);
+        rightBrake.setPosition(brakeOff);
+
+        brakesActive = false;
+    }
+
+    public void toggleBrakes() {
+        if (brakesActive) {
+            deactivateBrakes();
+            setIndicatorLightGreen();
+        }
+        else {
+            activateBrakes();
+            setIndicatorLightRed();
+        }
+    }
+
+    private void setIndicatorLightGreen() {
+        redLED.setState(false);
+        greenLED.setState(true);
+    }
+
+    private void setIndicatorLightRed() {
+        redLED.setState(true);
+        greenLED.setState(false);
     }
 
     public void activateIntakeLimiter() {
