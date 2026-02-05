@@ -49,8 +49,8 @@ public class TheBestTeleEverMade extends LinearOpMode {
         follower.update();
 
         robot.init();
-        //dev !! robot.setAlliance(robot.readAllianceFromFile());
-        robot.setAlliance(Config.Alliance.BLUE);
+        robot.setAlliance(robot.readAllianceFromFile());
+        // dev robot.setAlliance(Config.Alliance.BLUE);
 
         //TODO: Not working, Seems Red/Blue flipped
         //resetPose(0, 0, robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180));
@@ -81,6 +81,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
             double throttle = .3+(gamepad1.right_trigger*0.8); // throttle
             boolean resetFCD = gamepad1.dpad_up; // z axis reset
             boolean enableAimAssist = gamepad1.cross;
+            boolean brakeToggle = gamepad1.shareWasPressed();
 
             double allianceOffset = (robot.alliance == Config.Alliance.RED)
                     ? 0.0
@@ -94,6 +95,10 @@ public class TheBestTeleEverMade extends LinearOpMode {
             double axial = Math.cos(targetRadians)*gamepadHypot;
 
             //robot.aimAssist.headingPIDF.setCoefficient(kP,kI,kD,kF);
+
+            if (brakeToggle) {
+                robot.toggleBrakes();
+            }
 
             if (enableAimAssist) {
                 aimAssist = true;
