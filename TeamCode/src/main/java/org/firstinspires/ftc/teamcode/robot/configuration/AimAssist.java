@@ -1,31 +1,10 @@
 package org.firstinspires.ftc.teamcode.robot.configuration;
 
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 public class AimAssist {
 
-    private ElapsedTime runtime = new ElapsedTime(ElapsedTime.Resolution.SECONDS);
-    private boolean active;
-    private boolean cancel;
-    private final double blueDesiredTx = -5;
-    private final double redDesiredTx = -5;
-    private final double tolerance = 3; // Get within x degrees of target
-    private final double minWheelPower = 0.1; // Smallest amount of power that still moves wheels
-    private double correctionPower = 0.3;
-    private double scaleFactor = 0.05;
     private boolean simpleMode = false;
-
-
-    private enum Poses {
-        CLOSE_LAUNCH_1(new Pose(0,0,0)),
-        CLOSE_LAUNCH_2(new Pose(0,0,0)),
-        CLOSE_LAUNCH_3(new Pose(0,0,0));
-
-        private final Pose pose;
-        Poses(Pose pose) {this.pose = pose;}
-        public Pose getValue() {return pose;}
-    }
 
     /**
      * @return true if active
@@ -48,22 +27,6 @@ public class AimAssist {
         simpleMode = false;
     }
 
-    public Pose getNearestPose(Pose currentPose) {
-
-        Poses[] shootingPoses = Poses.values();
-
-        double lowestDistance = 99999;
-        Pose closestPose = currentPose;
-
-        for (Poses launchPose : shootingPoses) {
-            if(getPoseDistance(currentPose,launchPose.getValue()) < lowestDistance) {
-                lowestDistance = getPoseDistance(currentPose,launchPose.getValue());
-                closestPose = launchPose.getValue();
-            }
-        }
-        return closestPose;
-    }
-
     public double getPoseDistance(Pose p1, Pose p2) {
         double dx = p1.getPose().getX() - p2.getPose().getX();
         double dy = p1.getPose().getY() - p2.getPose().getY();
@@ -83,11 +46,6 @@ public class AimAssist {
         log("Ready.");
     }
 
-    public double getCorrectionYaw(Pose currentPose, Pose targetToFace) {
-        double headingCalc = robot.aimAssist.getHeadingForTarget(currentPose,targetToFace);
-        return currentPose.getHeading()-headingCalc;
-    }
-
     /**
      * Calculates desired heading to face a position on a pedro-field. <break></break>
      * <b>Simple Mode:</b> returns BLUE=135deg  RED=35deg (In Radians)
@@ -102,16 +60,9 @@ public class AimAssist {
             return (robot.alliance == Config.Alliance.RED ? 35 : 135);
         }
 
-        // Heading to swap to non-FTC logo side for backboard shots
-        double adjustOuter = Math.toRadians(135); // Use Alliance ? heading1 : heading2 for team specifics
-        if (currentPose.getHeading() > adjustOuter) {
-
-        }
-
         // Robot's current state
         double robotX = currentPose.getX();
         double robotY = currentPose.getY();
-        double currentZ = currentPose.getHeading(); // Heading in radians
 
         // Target coordinates
         double targetX = targetToFace.getX();
@@ -122,55 +73,11 @@ public class AimAssist {
         double deltaY = targetY - robotY;
         double targetHeading = Math.atan2(deltaY, deltaX);
 
-        //log("target to face " + targetToFace);
-        //log("getHeadingForTarget yields " + targetHeading);
         if (Math.toDegrees(targetHeading) < 13) {targetHeading = 1;}
         if (Math.toDegrees(targetHeading) > 167) {targetHeading = 179;}
         return targetHeading;
     }
 
-    /**
-     * Calculates desired heading to face a position on a pedro-field. <break></break>
-     * <b>Simple Mode:</b> returns BLUE=135deg  RED=35deg (In Radians)
-     * @param currentPose Robot current position on the field <b>(must be correct)</b>
-     * @return The correct heading in radians to face the target Pose
-     * @SimpleMode returns BLUE=135deg  RED=35deg (In Radians)
-     */
- /*   public double getGoalHeading(Pose currentPose) {
-
-        if (simpleMode) {
-            return (robot.alliance == Config.Alliance.RED ? 35 : 135);
-        }
-
-        //Pose targetToFace = 
-
-        // Heading to swap to non-FTC logo side for backboard shots
-        double adjustOuter = Math.toRadians(135); // Use Alliance ? heading1 : heading2 for team specifics
-        if (currentPose.getHeading() > adjustOuter) {
-
-        }
-
-        // Robot's current state
-        double robotX = currentPose.getX();
-        double robotY = currentPose.getY();
-        double currentZ = currentPose.getHeading(); // Heading in radians
-
-        // Target coordinates
-        double targetX = targetToFace.getX();
-        double targetY = targetToFace.getY();
-
-        // Calculate the target heading in the field frame
-        double deltaX = targetX - robotX;
-        double deltaY = targetY - robotY;
-        double targetHeading = Math.atan2(deltaY, deltaX);
-
-        //log("target to face " + targetToFace);
-        //log("getHeadingForTarget yields " + targetHeading);
-        if (Math.toDegrees(targetHeading) < 13) {targetHeading = 1;}
-        if (Math.toDegrees(targetHeading) > 167) {targetHeading = 179;}
-        return targetHeading;
-    }
-*/
     /**
      * Wraps angles (Radians).
      * @param angle Radian angle.
@@ -182,18 +89,6 @@ public class AimAssist {
         return angle;
     }
 
-    /**
-     *
-     * @return The correct alliance goal heading.
-     */
-    public double simpleGoalHeading() {
-        if(robot.alliance == Config.Alliance.RED) {
-            return Math.toRadians(135);
-        }
-        else{
-            return Math.toRadians(50); // Why flipped ??? Idk
-        }
-    }
 
     public class HeadingPIDF {
 
@@ -215,18 +110,6 @@ public class AimAssist {
             this.kD = kD;
             this.kF = kF;
             lastTime = System.nanoTime();
-        }
-
-        public void setCoefficient(double kP, double kI, double kD, double kF) {
-            this.kP = kP;
-            this.kI = kI;
-            this.kD = kD;
-            this.kF = kF;
-        }
-
-        public void setOutputLimits(double max) {
-            minOutput = -max;
-            maxOutput = max;
         }
 
         public void reset() {
@@ -290,20 +173,6 @@ public class AimAssist {
 
         return idealLauncherVelocity;
 
-    }
-
-
-    /**
-     * Cancels runCorrection.
-     */
-    public void cancelCorrection() {
-        if(active) {
-            cancel = true;
-        }
-    }
-
-    public boolean isActive() {
-        return active;
     }
 
     private void log(String message) {

@@ -36,7 +36,7 @@ public class MotorTester extends LinearOpMode {
                 field.setAccessible(true);
 
                 // Setting
-                detectedMotor newMotor = null;
+                detectedMotor newMotor;
                 try {
                     Object value = field.get(robot);
 
@@ -129,8 +129,8 @@ public class MotorTester extends LinearOpMode {
 }
 
 class detectedMotor {
-    private String name = null;
-    private DcMotor instance = null;
+    private String name;
+    private DcMotor instance;
 
     public detectedMotor(String motorName, DcMotorEx motorInstance) {
         name = motorName;

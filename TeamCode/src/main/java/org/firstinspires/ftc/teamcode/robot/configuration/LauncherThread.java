@@ -54,10 +54,6 @@ public class LauncherThread extends Thread {
         }
     }
 
-    public void waitWhileBusy() {
-        while(isBusy && robot.opModeIsActive);
-    }
-
     public boolean isBusy() {
         return isBusy;
     }
@@ -121,9 +117,6 @@ public class LauncherThread extends Thread {
             robot.agitator.setPower(robot.agitatorActivePower);
             robot.intakeMotor.setVelocity(robot.intakeMotorOnVelocity);
 
-            //robot.aimAssist.runAngleCorrection(5);
-            //robot.aimAssist.runPowerCalculation();
-
             updateLauncherVelocityAndWait();
             robot.deactivateIntakeLimiter();
             sleep(150);
@@ -172,71 +165,6 @@ public class LauncherThread extends Thread {
         robot.activateIntakeLimiter();
         robot.launcherMotor.setVelocity(robot.idleLauncherVelocity);
         log("Launcher set to Idle");
-    }
-
-    public void cancelLaunch() {
-        if(robot.launcherThread.isBusy) {
-            log("Cancel: Interrupting launcher");
-            robot.launcherThread.interrupt();
-            log("Cancel: Idling Launcher");
-            idleLauncher();
-
-        }
-
-    }
-
-    /**
-     * @deprecated Using doLaunch for both three and two currently.
-     * @throws InterruptedException
-     */
-    private void doLaunchThree() throws InterruptedException {
-
-        robot.agitator.setPower(robot.agitatorActivePower);
-        robot.intakeMotor.setVelocity(robot.intakeMotorOnVelocity*.4);
-
-        // !! Unstable: If idealVelocity changes -> may never reach
-        // Launch motor ramp up.
-        setLauncherVelocity(robot.idealLauncherVelocity);
-        waitForLauncherVelocity(robot.idealLauncherVelocity);
-
-        // First launch
-        robot.activateKicker();
-        robot.deactivateIntakeLimiter();
-
-        //robot.waitForKicker();
-
-        log("(1/3) - Artifact Launched");
-
-        // TODO: Reverse agitator
-        // TODO: Slow reverse intake
-
-        // Store kicker
-        robot.storeKicker();
-        //robot.waitForKicker();
-
-        // TODO: Set agitator forward - runToPos?
-        // TODO: Slow forward intake
-        // TODO: Wait for artifact to enter chamber - runToPos?
-
-        // Activate kicker
-        robot.activateKicker();
-        //robot.waitForKicker();
-
-        // TODO: motor reRamp - not in repeat
-        // TODO: repeat
-
-        // Activate Intake Limiter
-        robot.activateIntakeLimiter();
-        robot.waitForLimiter();
-
-        // TODO: turn off/on agitator && intake (option?)
-
-        log("Finished Launch Sequence Type:3");
-    }
-
-    public synchronized void terminate() {
-        running = false;
-        notify();
     }
 
     public synchronized void launchOne() {

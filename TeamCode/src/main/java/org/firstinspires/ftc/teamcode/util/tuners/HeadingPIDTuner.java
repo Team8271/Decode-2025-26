@@ -1,14 +1,12 @@
 package org.firstinspires.ftc.teamcode.util.tuners;
 
 import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.robot.configuration.AimAssist;
 import org.firstinspires.ftc.teamcode.robot.configuration.Config;
 import org.firstinspires.ftc.teamcode.util.Poses;
 
@@ -17,17 +15,13 @@ public class HeadingPIDTuner extends LinearOpMode {
     private Follower follower;
 
     Config robot;
-    Pose startingPose;
     ElapsedTime runtime = new ElapsedTime();
     double lastAACalcTime = 0;
-
-    private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
-
 
     private double targetHeading;
 
     @Override
-    public void runOpMode() throws InterruptedException {
+    public void runOpMode() {
 
         robot = new Config(this, null);
         robot.init();
@@ -149,64 +143,13 @@ public class HeadingPIDTuner extends LinearOpMode {
         private double kD;
         private double kF; // feedforward gain
 
-        private double integralSum = 0.0;
-        private double lastError = 0.0;
-        private long lastTime;
-
-        private double minOutput = -1.0;
-        private double maxOutput = 1.0;
-
         public HeadingPIDF(double kP, double kI, double kD, double kF) {
             this.kP = kP;
             this.kI = kI;
             this.kD = kD;
             this.kF = kF;
-            lastTime = System.nanoTime();
         }
 
-        public void setOutputLimits(double max) {
-            minOutput = -max;
-            maxOutput = max;
-        }
-
-        public void reset() {
-            integralSum = 0.0;
-            lastError = 0.0;
-            lastTime = System.nanoTime();
-        }
-
-        /**
-         * @param error Distance in radians from target heading (AutoWrapped)
-         * @return A value between -1 and 1 used for yaw motions
-         */
-        public double calculate(double error) {
-
-            error = AimAssist.angleWrap(error);
-
-            long now = System.nanoTime();
-            double deltaTime = (now - lastTime) / 1e9;
-            lastTime = now;
-
-            // PID terms
-            integralSum += error * deltaTime;
-            double derivative = deltaTime > 0 ? (error - lastError) / deltaTime : 0.0;
-            lastError = error;
-
-            double pTerm = kP * error;
-            double iTerm = kI * integralSum;
-            double dTerm = kD * derivative;
-
-            // Feedforward (static friction compensation)
-            double fTerm = kF * Math.signum(error);
-
-            double output = pTerm + iTerm + dTerm + fTerm;
-
-            // Clamp output
-            if (output > maxOutput) output = maxOutput;
-            if (output < minOutput) output = minOutput;
-
-            return output;
-        }
     }
 
 }

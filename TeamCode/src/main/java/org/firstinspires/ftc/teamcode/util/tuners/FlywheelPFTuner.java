@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.util.tuners;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -41,7 +40,6 @@ public class FlywheelPFTuner extends OpMode {
 
     int stepIndex = 1;
 
-    Limelight3A limelight;
     LLResult result;
     boolean valid;
     Pose3D blankPose = new Pose3D(new Position(), new YawPitchRollAngles(AngleUnit.RADIANS,0,0,0,0));
@@ -54,9 +52,6 @@ public class FlywheelPFTuner extends OpMode {
             storeLeftKickerPosition = 0.6, storeRightKickerPosition = 1 - storeLeftKickerPosition,
             activeLeftKickerPosition = 0, activeRightKickerPosition = 1 - activeLeftKickerPosition,
             intakeLimServerActivePosition = 1, intakeLimServoInactivePosition = 0.5;
-
-    private double desiredLeftKickerPosition = storeLeftKickerPosition,
-            desiredIntakeLimiterPosition = intakeLimServerActivePosition;
 
     private Servo leftKickerServo, rightKickerServo, intakeLimServo;
 
@@ -260,7 +255,6 @@ public class FlywheelPFTuner extends OpMode {
     }
 
     public void activateKicker() {
-        desiredLeftKickerPosition = activeLeftKickerPosition;
         leftKickerServo.setPosition(activeLeftKickerPosition);
         rightKickerServo.setPosition(activeRightKickerPosition);
     }
@@ -270,16 +264,8 @@ public class FlywheelPFTuner extends OpMode {
     }
 
     public void storeKicker() {
-        desiredLeftKickerPosition = storeLeftKickerPosition;
         leftKickerServo.setPosition(storeLeftKickerPosition);
         rightKickerServo.setPosition(storeRightKickerPosition);
-    }
-
-    public void initLL() {
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.setPollRateHz(11);
-        limelight.start();
-        limelight.pipelineSwitch(0);
     }
 
     public void updateLLResults() {

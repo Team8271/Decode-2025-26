@@ -10,11 +10,9 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ReadWriteFile;
 
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
@@ -44,20 +42,14 @@ public class Config {
             activeLeftKickerPosition = 0, activeRightKickerPosition = 1 - activeLeftKickerPosition,
             intakeLimServerActivePosition = 0.85, intakeLimServoInactivePosition = 0.5;
 
-    public final double indicatorLightOn = 0.3, indicatorLightOff = 0,
-                        indicatorLightReverse = 0.555, indicatorLightOffBog = 0.444;
-
-    public final int motorRampUpTime = 3000;
+    public final double indicatorLightOn = 0.3, indicatorLightOff = 0;
 
     public boolean devBool = false;
     private boolean brakesActive = false;
 
-    // This value will be changed with Limelight sensing to get the ideal power
-    public double idealLauncherVelocity = 1225, idleLauncherVelocity = 900;
+    public double idleLauncherVelocity = 900;
 
-    private double  desiredLeftKickerPosition = storeLeftKickerPosition,
-                    desiredIntakeLimiterPosition = intakeLimServerActivePosition,
-                    brakeOn = 0, brakeOff = 0.5;
+    private double brakeOn = 0, brakeOff = 0.5;
 
     // Reference to opMode class
     public final LinearOpMode linearOpMode;
@@ -75,9 +67,6 @@ public class Config {
     private Servo leftKickerServo, rightKickerServo, intakeLimServo, leftBrake, rightBrake;
     public Servo indicatorLight;
 
-    private DigitalChannel redLED;
-    private DigitalChannel greenLED;
-
     // Other Hardware
     public Limelight3A limelightCamera;
     //public IMU imu;
@@ -85,16 +74,12 @@ public class Config {
     public Motif motif;
 
     public LauncherThread launcherThread;
-    public Limelight limelight;
 
     public AimAssist aimAssist;
 
     // enums
     public enum Motif {
-        GPP,    // AprilTag 21
-        PGP,    // AprilTag 22
-        PPG,    // AprilTag 23
-        NULL;
+        NULL
     }
 
     public enum Alliance {
@@ -104,17 +89,9 @@ public class Config {
         private final Pose alliance;
         Alliance(Pose alliance) { this.alliance = alliance; }
         public Pose getPose() { return alliance; }
-        public Pose getLogoPose() { return alliance; } // Not set up yet
-    }
-
-    public enum DriverAmount {
-        ONE_DRIVER,
-        TWO_DRIVERS,
-        DEV_DRIVER
     }
 
     public Alliance alliance;
-    DriverAmount driverAmount;
 
     // TweetyBird Classes
     public ThreeWheeled odometer;
@@ -249,8 +226,6 @@ public class Config {
         launcherThread = new LauncherThread();
         launcherThread.setConfig(this);
 
-        limelight = new Limelight(this);
-
         // Starts Threads
         checkAndRestartThreads();
 
@@ -289,10 +264,6 @@ public class Config {
         log("Robot Initialized");
     }
 
-    /*public void aimAssistInit() {
-        aimAssist = new AimAssist(this,1.5,0,0,0.6);
-    }*/
-
     /** Initializes TweetyBird.
      * @deprecated In favor of Pedro-Pathing
      */
@@ -330,38 +301,9 @@ public class Config {
         saveAllianceToFile(alliance);
     }
 
-    public void increaseLauncherVelocity() {
-        idealLauncherVelocity = Range.clip(idealLauncherVelocity + 100, 0, 2500);
-    }
-
-    public void decreaseLauncherVelocity() {
-        idealLauncherVelocity = Range.clip(idealLauncherVelocity - 100, 0, 2500);
-    }
-
-    public void switchAlliance() {
-        switch (alliance) {
-            case RED:
-                alliance = Alliance.BLUE;
-                break;
-            case BLUE:
-                alliance = Alliance.RED;
-                break;
-        }
-        saveAllianceToFile(alliance);
-    }
-
-
     public void log(String message) {
         // Log to Android Logcat (viewable in Android Studio)
         Log.i("FTC_CONFIG", message);
-
-        /*
-        // Also log to telemetry if opMode is available
-        if (opMode != null && opMode.telemetry != null) {
-            opMode.telemetry.log().add(message);
-        }
-
-         */
 
         // Optional: Log to file
         logToFile(message);
@@ -496,42 +438,6 @@ public class Config {
         }
     }
 
-
-    public DriverAmount readDriverAmountFromFile() {
-        try {
-            File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
-
-            if (!file.exists()) {
-                log("DriverAmount file not found, defaulting to TWO_DRIVERS");
-                return DriverAmount.TWO_DRIVERS;
-            }
-
-            String fileContents = ReadWriteFile.readFile(file).trim().toUpperCase();
-
-            if (fileContents.equals("TWO_DRIVERS")) {
-                log("DriverAmount read from file: TWO_DRIVERS");
-                return DriverAmount.TWO_DRIVERS;
-            }
-
-            log("DriverAmount read from file: ONE_DRIVER");
-            return DriverAmount.ONE_DRIVER;
-
-        } catch (Exception e) {
-            log("Failed to read driver amount: " + e.getMessage());
-            return DriverAmount.TWO_DRIVERS;
-        }
-    }
-
-    public void saveDriverAmountToFile(DriverAmount driverAmount) {
-        try {
-            File file = new File(AppUtil.FIRST_FOLDER, "driverAmount.txt");
-            ReadWriteFile.writeFile(file, driverAmount.toString());
-            log("DriverAmount saved: " + driverAmount);
-        } catch (Exception e) {
-            log("Failed to save driver amount: " + e.getMessage());
-        }
-    }
-
     /**
      * Checks if kicker and launcher threads are active.
      * If not active, starts them.
@@ -541,23 +447,6 @@ public class Config {
             log("Starting launcherThread");
             launcherThread.start();
         }
-    }
-
-    public void killThreads() {
-        try {
-            launcherThread.terminate();
-        } catch (Exception e) {
-            log("Failed to stop launcherThread");
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void setWheelPower(double flPower, double frPower, double blPower, double brPower) {
-
-        fl.setPower(flPower);
-        fr.setPower(frPower);
-        bl.setPower(blPower);
-        br.setPower(brPower);
     }
 
     public void runIntakeAssembly() {
@@ -599,30 +488,12 @@ public class Config {
         }
     }
 
-    private void setIndicatorLightGreen() {
-        redLED.setState(false);
-        greenLED.setState(true);
-    }
-
-    private void setIndicatorLightRed() {
-        redLED.setState(true);
-        greenLED.setState(false);
-    }
-
     public void activateIntakeLimiter() {
-        desiredIntakeLimiterPosition = intakeLimServerActivePosition;
         intakeLimServo.setPosition(intakeLimServerActivePosition);
         devBool = true;
     }
 
-    public void waitForLimiter() throws InterruptedException {
-        while(intakeLimServo.getPosition() != desiredIntakeLimiterPosition) {
-            Thread.sleep(50);
-        }
-    }
-
     public void deactivateIntakeLimiter() {
-        desiredIntakeLimiterPosition = intakeLimServoInactivePosition;
         intakeLimServo.setPosition(intakeLimServoInactivePosition);
         devBool = false;
     }
@@ -633,7 +504,6 @@ public class Config {
     }
 
     public void activateKicker() {
-        desiredLeftKickerPosition = activeLeftKickerPosition;
         leftKickerServo.setPosition(activeLeftKickerPosition);
         rightKickerServo.setPosition(activeRightKickerPosition);
     }
@@ -643,10 +513,7 @@ public class Config {
     }
 
     public void storeKicker() {
-        desiredLeftKickerPosition = storeLeftKickerPosition;
         leftKickerServo.setPosition(storeLeftKickerPosition);
         rightKickerServo.setPosition(storeRightKickerPosition);
     }
 }
-
-

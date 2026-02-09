@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.robot;
 
-import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -11,7 +10,7 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.configuration.*;
 import org.firstinspires.ftc.teamcode.util.Poses;
-//@Configurable
+
 @TeleOp(name = "! TheBestTeleEverMade !")
 public class TheBestTeleEverMade extends LinearOpMode {
     Config robot;
@@ -22,23 +21,10 @@ public class TheBestTeleEverMade extends LinearOpMode {
     double lastAACalcTime = 0;
     double lastLauncherCalcTime = 0;
 
-    public static double kP = 4;
-    public static double kI = 0;
-    public static double kD = 0.3;
-    public static double kF = 0.01;
-
-
-    // TODO: Limelight pose updating
-    // TODO: Limelight correction but if no data switch to odometry
-
     boolean intakeAssemblyIsActive = false;
     boolean intakeAssemblyIsReversed = false;
 
-    double targetHeading;
-    //boolean correctHeading = false;
     boolean aimAssist = false;
-
-    double lastTx = 0;
 
     @Override
     public void runOpMode() {
@@ -175,11 +161,6 @@ public class TheBestTeleEverMade extends LinearOpMode {
                 }
             }
 
-            //if(cancelLaunch) {
-            //    log("Canceling launch");
-            //    robot.launcherThread.cancelLaunch();
-            //}
-
             if (launchOneArtifact) {
                 robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
                 robot.launcherThread.launchOne();
@@ -256,36 +237,6 @@ public class TheBestTeleEverMade extends LinearOpMode {
         //robot.savePoseToFile(follower.getPose());
     }
 
-    private void runSelector() {
-
-        // Read last alliance from file
-        robot.alliance = robot.readAllianceFromFile();
-
-        while (!isStarted() && !isStopRequested()) {
-
-            if (gamepad1.dpadDownWasPressed()) {
-
-                switch (robot.alliance) {
-                    case BLUE:
-                        robot.setAlliance(Config.Alliance.RED);
-                        break;
-                    case RED:
-                        robot.setAlliance(Config.Alliance.BLUE);
-                        break;
-                }
-
-            }
-
-            telemetry.addData("Alliance", robot.alliance.toString());
-            telemetry.addLine("\nPress START");
-            telemetry.update();
-
-            // Don't hog system
-            sleep(50);
-        }
-        robot.saveAllianceToFile(robot.alliance);
-    }
-
     private void setTeleOpDrive(double axial, double lateral, double yaw, double throttle, boolean throttleEffectsYaw) {
         double axialScaled = axial * throttle;
         double lateralScaled = lateral * throttle;
@@ -308,15 +259,10 @@ public class TheBestTeleEverMade extends LinearOpMode {
         robot.br.setPower(rightBackPower / max);
     }
 
-    private double getX() {
-        return follower.getPose().getX();
-    }
-    private double getY() {
-        return follower.getPose().getY();
-    }
     private double getHeading() {
         return follower.getPose().getHeading();
     }
+
     private void resetPose(double x, double y, double heading) {
         follower.setPose(new Pose(x,y,heading));
     }

@@ -607,20 +607,12 @@ public class AutoMaker {
             this.name = name;
         }
 
-        public PoseCmd(Pose pose) {
-            this.pose = pose;
-            this.name = null;
-        }
     }
 
 
     /// Helper for clean syntax
     public PoseCmd P(Pose pose) {
         return new PoseCmd(pose, getPoseName(pose));
-    }
-
-    public PoseCmd P(Pose pose, String name) {
-        return new PoseCmd(pose, name);
     }
 
     /**
@@ -666,18 +658,12 @@ public class AutoMaker {
         }
     }
 
-    /// Helper for clean syntax
-    public PathChainCmd PC(PathChain pathChain) {
-        return new PathChainCmd(pathChain);
-    }
-
     /// Action commands
     public enum ActionCmd implements AutoCommand {
         RUN_INTAKE,
         STOP_INTAKE,
         LAUNCH,
-        IDLE;
-
+        IDLE
     }
 
     public ActionCmd A(ActionCmd actionCmd) {return actionCmd;}
@@ -700,8 +686,6 @@ public class AutoMaker {
                 break;
         }
     }
-
-    public interface BuiltCommands {}
 
     public static class Sequence {
         private final List<AutoCommand> commands;
@@ -744,9 +728,6 @@ public class AutoMaker {
      * @throws IllegalArgumentException if first command is not a PoseCmd
      */
     public Sequence build(AutoCommand... commands) {
-        waitingForPath = false;
-        waitingForLauncher = false;
-        commandIndex = 0;
 
         List<AutoCommand> commandList = new ArrayList<>();
 
@@ -886,7 +867,6 @@ public class AutoMaker {
 
         // Generate path variables with descriptive names
         code.append("    // Path variables\n");
-        int pathCounter = 1;
         int poseIndex = 0;
         List<String> pathNames = new ArrayList<>();
 
@@ -897,7 +877,6 @@ public class AutoMaker {
                 String pathName = fromPose + "_to_" + toPose;
                 pathNames.add(pathName);
                 code.append("    private PathChain " + pathName + ";\n");
-                pathCounter++;
                 poseIndex++;
             }
         }
@@ -1131,67 +1110,4 @@ public class AutoMaker {
         robot.log("[AMaker] ==========================");
     }
 
-
-    private boolean waitingForPath = false;
-    private boolean waitingForLauncher = false;
-    private int commandIndex = 0;
-
-    public int getCommandIndex() {return commandIndex;}
-
-    /**
-     * @implNote Call after each follower update in OpMode loop.
-     * @param sequence a sequence of auto commands
-     */
-    public void updateSequence(Sequence sequence) {
-        log("update");
-        log("cmd index = " + commandIndex);
-
-        // Don't advance if waiting on something
-        if (waitingForPath && follower.isBusy()) {
-            log("Waiting for path");
-            return;
-        }
-        if (waitingForLauncher && robot.launcherThread.isBusy()) {
-            log("Waiting for launcher");
-            return;
-        }
-
-        // Clear waits once done
-        waitingForPath = false;
-        waitingForLauncher = false;
-
-        if (commandIndex >= sequence.getCommands().size()) {
-            log("Finished all commands");
-            return;
-        }
-
-        AutoCommand cmd = sequence.getCommands().get(commandIndex);
-
-        if (cmd instanceof PoseCmd) { // StartPose or Pose Resetting
-            PoseCmd poseCmd = (PoseCmd) cmd;
-            follower.setPose(poseCmd.pose);
-            log("Starting pose set to " + poseCmd.pose);
-            commandIndex++;
-
-        } else if (cmd instanceof PathChainCmd) {
-            PathChainCmd pathCmd = (PathChainCmd) cmd;
-            follower.followPath(pathCmd.pathChain);
-            log("Following path " + pathCmd.pathChain.toString());
-            waitingForPath = true;
-            commandIndex++;
-
-        } else if (cmd instanceof ActionCmd) {
-            ActionCmd actionCmd = (ActionCmd) cmd;
-            runAction(actionCmd);
-            log("Running action " + actionCmd.name());
-            if (actionCmd == ActionCmd.LAUNCH) {
-                waitingForLauncher = true;
-            }
-            commandIndex++;
-        }
-    }
-
-    private void log(String msg) {
-        robot.log("[AMaker] " + msg);
-    }
 }
