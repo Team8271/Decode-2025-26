@@ -10,7 +10,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.configuration.Config;
 import org.firstinspires.ftc.teamcode.util.Poses;
 
-@TeleOp(name="HeadingPID TeleOp", group="Drive")
+@TeleOp(name = "HeadingPID TeleOp", group = "Drive")
 public class HeadingPIDTuner extends LinearOpMode {
     private Follower follower;
 
@@ -37,7 +37,7 @@ public class HeadingPIDTuner extends LinearOpMode {
         double headingCalc = follower.getHeading();
 
 
-        HeadingPIDF headingPID = new HeadingPIDF(1.5, 0.0, 0.0,0.01);
+        HeadingPIDF headingPID = new HeadingPIDF(1.5, 0.0, 0.0, 0.01);
 
         telemetry.addLine("Waiting for Start");
         telemetry.update();
@@ -54,26 +54,25 @@ public class HeadingPIDTuner extends LinearOpMode {
             double axialControl = -gamepad1.left_stick_y;  // y axis
             double lateralControl = gamepad1.left_stick_x; // x axis
             double yawControl = gamepad1.right_stick_x;    // z axis
-            double throttle = .2+(gamepad1.right_trigger*0.8); // throttle
+            double throttle = .2 + (gamepad1.right_trigger * 0.8); // throttle
 
             double gamepadRadians = Math.atan2(lateralControl, axialControl);
             double gamepadHypot = Range.clip(Math.hypot(lateralControl, axialControl), 0, 1);
             double robotRadians = getHeading();
             double targetRadians = gamepadRadians + robotRadians;
-            double lateral = Math.sin(targetRadians)*gamepadHypot;
-            double axial = Math.cos(targetRadians)*gamepadHypot;
+            double lateral = Math.sin(targetRadians) * gamepadHypot;
+            double axial = Math.cos(targetRadians) * gamepadHypot;
 
 
             // Manual yaw override
             if (Math.abs(yawControl) > 0.05) {
                 throttleEffectsYaw = true;
-            }
-            else {
+            } else {
                 // Run intensive calculations every delay seconds
                 double delay = 20;
                 if (runtime.milliseconds() > lastAACalcTime + delay) {
 
-                    double error = follower.getHeading()-headingCalc;
+                    double error = follower.getHeading() - headingCalc;
 
                     //telemetry.addData("AA ERROR", error);
 
@@ -89,14 +88,14 @@ public class HeadingPIDTuner extends LinearOpMode {
 
 
             // ---- PID Tuning via Gamepad ----
-            if (gamepad1.dpad_up)    headingPID.kP += 0.01;
-            if (gamepad1.dpad_down)  headingPID.kP -= 0.01;
+            if (gamepad1.dpad_up) headingPID.kP += 0.01;
+            if (gamepad1.dpad_down) headingPID.kP -= 0.01;
             if (gamepad1.dpad_right) headingPID.kD += 0.005;
-            if (gamepad1.dpad_left)  headingPID.kD -= 0.005;
-            if (gamepad1.y)          headingPID.kI += 0.001;
-            if (gamepad1.a)          headingPID.kI -= 0.001;
-            if (gamepad2.dpadUpWasPressed())    headingPID.kF += 0.01;
-            if (gamepad2.dpadDownWasPressed())    headingPID.kF -= 0.01;
+            if (gamepad1.dpad_left) headingPID.kD -= 0.005;
+            if (gamepad1.y) headingPID.kI += 0.001;
+            if (gamepad1.a) headingPID.kI -= 0.001;
+            if (gamepad2.dpadUpWasPressed()) headingPID.kF += 0.01;
+            if (gamepad2.dpadDownWasPressed()) headingPID.kF -= 0.01;
 
 
             telemetry.addData("kP", headingPID.kP);
@@ -120,10 +119,10 @@ public class HeadingPIDTuner extends LinearOpMode {
         double lateralScaled = lateral * throttle;
         double yawScaled = throttleEffectsYaw ? yaw * throttle : yaw;
 
-        double leftFrontPower  = axialScaled + lateralScaled + yawScaled;
+        double leftFrontPower = axialScaled + lateralScaled + yawScaled;
         double rightFrontPower = axialScaled - lateralScaled - yawScaled;
-        double leftBackPower   = axialScaled - lateralScaled + yawScaled;
-        double rightBackPower  = axialScaled + lateralScaled - yawScaled;
+        double leftBackPower = axialScaled - lateralScaled + yawScaled;
+        double rightBackPower = axialScaled + lateralScaled - yawScaled;
 
         double max = Math.max(1.0,
                 Math.max(Math.abs(leftFrontPower),

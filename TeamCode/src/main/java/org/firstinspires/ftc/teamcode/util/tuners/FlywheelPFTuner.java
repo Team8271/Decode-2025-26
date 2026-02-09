@@ -42,7 +42,7 @@ public class FlywheelPFTuner extends OpMode {
 
     LLResult result;
     boolean valid;
-    Pose3D blankPose = new Pose3D(new Position(), new YawPitchRollAngles(AngleUnit.RADIANS,0,0,0,0));
+    Pose3D blankPose = new Pose3D(new Position(), new YawPitchRollAngles(AngleUnit.RADIANS, 0, 0, 0, 0));
     Pose3D lLCurPose = blankPose;
     Pose3D lLCurPoseMT2 = blankPose;
     Pose3D lLLastPose = blankPose;
@@ -214,7 +214,7 @@ public class FlywheelPFTuner extends OpMode {
         double curVelocity = flywheelMotor.getVelocity();
         double error = curTargetVelocity - curVelocity;
 
-        double distance = robot.aimAssist.getPoseDistance(follower.getPose(),robot.alliance.getPose());
+        double distance = robot.aimAssist.getPoseDistance(follower.getPose(), robot.alliance.getPose());
 
         updateLLResults();
 
@@ -277,6 +277,8 @@ public class FlywheelPFTuner extends OpMode {
             lLCurPoseMT2 = result.getBotpose_MT2();
             lLLastPose = lLCurPose;
             lLLastPoseMT2 = lLCurPoseMT2;
-        } else { valid = false; }
+        } else {
+            valid = false;
+        }
     }
 }

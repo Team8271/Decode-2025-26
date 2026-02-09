@@ -83,12 +83,18 @@ public class Config {
     }
 
     public enum Alliance {
-        RED(new Pose(138,138)),
+        RED(new Pose(138, 138)),
         BLUE(new Pose(6, 138));
 
         private final Pose alliance;
-        Alliance(Pose alliance) { this.alliance = alliance; }
-        public Pose getPose() { return alliance; }
+
+        Alliance(Pose alliance) {
+            this.alliance = alliance;
+        }
+
+        public Pose getPose() {
+            return alliance;
+        }
     }
 
     public Alliance alliance;
@@ -108,19 +114,19 @@ public class Config {
     }
 
     public Config(LinearOpMode linearOpMode) {
-        this(linearOpMode,null,null);
+        this(linearOpMode, null, null);
     }
 
     public Config(LinearOpMode linearOpMode, Follower follower) {
-        this(linearOpMode,null,follower);
+        this(linearOpMode, null, follower);
     }
 
     public Config(OpMode opMode) {
-        this(null,opMode,null);
+        this(null, opMode, null);
     }
 
     public Config(OpMode opMode, Follower follower) {
-        this(null,opMode,follower);
+        this(null, opMode, follower);
     }
 
     /// Initialization Method
@@ -192,7 +198,7 @@ public class Config {
         launcherMotor.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         launcherMotor.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         launcherMotor.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.FLOAT);
-        launcherMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER,new PIDFCoefficients(130, 0,0,14.3));
+        launcherMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, new PIDFCoefficients(130, 0, 0, 14.3));
 
         // Called 'org' in spirit
         intakeMotor = hwMap.get(DcMotorEx.class, "intake");
@@ -230,7 +236,7 @@ public class Config {
         checkAndRestartThreads();
 
         // Aim Assist
-        aimAssist = new AimAssist(this,4,0,0.3,0.01);
+        aimAssist = new AimAssist(this, 4, 0, 0.3, 0.01);
 
         // Limelight3A Camera
         limelightCamera = hwMap.get(Limelight3A.class, "limelight");
@@ -264,7 +270,9 @@ public class Config {
         log("Robot Initialized");
     }
 
-    /** Initializes TweetyBird.
+    /**
+     * Initializes TweetyBird.
+     *
      * @deprecated In favor of Pedro-Pathing
      */
     public void initTweetyBird() {
@@ -453,6 +461,7 @@ public class Config {
         intakeMotor.setVelocity(intakeMotorOnVelocity);
         agitator.setPower(agitatorActivePower);
     }
+
     public void runIntakeAssembly(double vel) {
         intakeMotor.setVelocity(vel);
         agitator.setPower(agitatorActivePower);
@@ -481,8 +490,7 @@ public class Config {
         if (brakesActive) {
             deactivateBrakes();
             //setIndicatorLightGreen();
-        }
-        else {
+        } else {
             activateBrakes();
             //setIndicatorLightRed();
         }

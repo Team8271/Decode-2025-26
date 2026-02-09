@@ -6,7 +6,10 @@ package org.firstinspires.ftc.teamcode.robot.configuration;
  */
 public class LauncherThread extends Thread {
     Config robot;
-    public void setConfig(Config robot) {this.robot = robot;}
+
+    public void setConfig(Config robot) {
+        this.robot = robot;
+    }
 
     private volatile boolean launchThree = false;
     private volatile boolean isBusy = false;
@@ -32,14 +35,13 @@ public class LauncherThread extends Thread {
             isBusy = true;
             log("Set isBusy true in run.");
 
-            if(launchThree) {
+            if (launchThree) {
                 try {
                     doLaunch(3);
                 } catch (Exception e) {
                     log("ERROR while LaunchThree: " + e);
                 }
-            }
-            else {
+            } else {
                 try {
                     doLaunch(1);
                 } catch (Exception e) {
@@ -61,6 +63,7 @@ public class LauncherThread extends Thread {
     /**
      * Waits for launcher motor to reach target velocity within tolerance.
      * Includes timeout protection to prevent robot freezing.
+     *
      * @param velocity target velocity
      * @throws InterruptedException if thread is interrupted
      */
@@ -68,22 +71,22 @@ public class LauncherThread extends Thread {
         double curVelocity = robot.launcherMotor.getVelocity();
         long startTime = System.currentTimeMillis();
         long timeoutMs = 5000;
-        
-        while (!(curVelocity >= velocity-20 && curVelocity <= velocity+20)) {
+
+        while (!(curVelocity >= velocity - 20 && curVelocity <= velocity + 20)) {
             if (System.currentTimeMillis() - startTime > timeoutMs) {
                 log("Timeout waiting for launcher velocity. Current: " + curVelocity + ", Target: " + velocity);
                 break;
             }
-            
+
             if (!robot.opModeIsActive()) {
                 log("OpMode stopped during velocity wait");
                 break;
             }
-            
+
             curVelocity = robot.launcherMotor.getVelocity();
             sleep(50);
         }
-        
+
         log("Launcher velocity reached: " + curVelocity + " (target: " + velocity + ")");
     }
 
@@ -97,6 +100,7 @@ public class LauncherThread extends Thread {
 
     /**
      * Sets launch motor to targetLauncherVelocity and waits for velocity to match.
+     *
      * @implNote Use <I>aimAssist.setLauncherVelocity()</I> in an opMode to change this velocity.
      */
     private void updateLauncherVelocityAndWait() {
@@ -132,7 +136,7 @@ public class LauncherThread extends Thread {
                 robot.agitator.setPower(robot.agitatorActivePower);
                 robot.intakeMotor.setVelocity(200);
                 sleep(350); // Waiting for artifact to enter kicker
-                if(i==3){
+                if (i == 3) {
                     sleep(250); // Additional wait for third artifact
                 }
                 updateLauncherVelocityAndWait();
@@ -151,15 +155,16 @@ public class LauncherThread extends Thread {
             idleLauncher();
             if (intakeWasRunning) {
                 robot.runIntakeAssembly();
+            } else {
+                robot.stopIntakeAssembly();
             }
-            else {robot.stopIntakeAssembly();}
 
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
     }
-     /// Sets the Launcher to an Idle state using safe method of clearing kicker path.
+
+    /// Sets the Launcher to an Idle state using safe method of clearing kicker path.
     public void idleLauncher() {
         robot.storeKicker();
         robot.activateIntakeLimiter();
@@ -171,6 +176,7 @@ public class LauncherThread extends Thread {
         launchThree = false;
         notify();
     }
+
     public synchronized void launchThree() {
         launchThree = true;
         notify();

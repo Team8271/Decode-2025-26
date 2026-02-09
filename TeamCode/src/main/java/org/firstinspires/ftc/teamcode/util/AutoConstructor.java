@@ -64,29 +64,7 @@ public class AutoConstructor extends LinearOpMode {
                 autoMaker.A(AutoMaker.ActionCmd.LAUNCH),
                 autoMaker.P(Poses.Blue.farPark)
         );*/
-        AutoMaker.BlankSequence seq = autoMaker.buildBlankSequence(
-                autoMaker.P(Blue.farStart),
-                autoMaker.P(Blue.closeScore),
-                autoMaker.A(AutoMaker.ActionCmd.LAUNCH),
-                autoMaker.P(Blue.lineUpSpike2),
-                autoMaker.A(AutoMaker.ActionCmd.RUN_INTAKE),
-                autoMaker.P(Blue.pickUpSpike2),
-                autoMaker.A(AutoMaker.ActionCmd.STOP_INTAKE),
-                autoMaker.P(Blue.openGate),
-                autoMaker.P(Blue.closeScore),
-                autoMaker.A(AutoMaker.ActionCmd.LAUNCH),
-                autoMaker.P(Blue.lineUpSpike1),
-                autoMaker.A(AutoMaker.ActionCmd.RUN_INTAKE),
-                autoMaker.P(Blue.pickUpSpike1),
-                autoMaker.A(AutoMaker.ActionCmd.STOP_INTAKE),
-                autoMaker.P(Blue.closeScore),
-                autoMaker.A(AutoMaker.ActionCmd.LAUNCH),
-                autoMaker.P(Blue.lineUpSpike3),
-                autoMaker.A(AutoMaker.ActionCmd.RUN_INTAKE),
-                autoMaker.P(Blue.pickUpSpike3),
-                autoMaker.A(AutoMaker.ActionCmd.STOP_INTAKE),
-                autoMaker.P(Blue.closeScorePark)
-        );
+        AutoMaker.BlankSequence seq = autoMaker.buildBlankSequence(autoMaker.P(Blue.farStart), autoMaker.P(Blue.closeScore), autoMaker.A(AutoMaker.ActionCmd.LAUNCH), autoMaker.P(Blue.lineUpSpike2), autoMaker.A(AutoMaker.ActionCmd.RUN_INTAKE), autoMaker.P(Blue.pickUpSpike2), autoMaker.A(AutoMaker.ActionCmd.STOP_INTAKE), autoMaker.P(Blue.openGate), autoMaker.P(Blue.closeScore), autoMaker.A(AutoMaker.ActionCmd.LAUNCH), autoMaker.P(Blue.lineUpSpike1), autoMaker.A(AutoMaker.ActionCmd.RUN_INTAKE), autoMaker.P(Blue.pickUpSpike1), autoMaker.A(AutoMaker.ActionCmd.STOP_INTAKE), autoMaker.P(Blue.closeScore), autoMaker.A(AutoMaker.ActionCmd.LAUNCH), autoMaker.P(Blue.lineUpSpike3), autoMaker.A(AutoMaker.ActionCmd.RUN_INTAKE), autoMaker.P(Blue.pickUpSpike3), autoMaker.A(AutoMaker.ActionCmd.STOP_INTAKE), autoMaker.P(Blue.closeScorePark));
 
         autoMaker.printCase(seq);
     }

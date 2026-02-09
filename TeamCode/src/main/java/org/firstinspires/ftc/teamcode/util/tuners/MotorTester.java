@@ -19,7 +19,7 @@ public class MotorTester extends LinearOpMode {
     /// OpMode Start
     @Override
     public void runOpMode() {
-        robot = new Config(this,null);
+        robot = new Config(this, null);
         robot.init();
 
         telemetry.setAutoClear(false);
@@ -43,9 +43,9 @@ public class MotorTester extends LinearOpMode {
                     newMotor = new detectedMotor(field.getName(), (DcMotorEx) value);
                     motorsList.add(newMotor);
 
-                    telemetry.addData("New Detection",newMotor.getName());
+                    telemetry.addData("New Detection", newMotor.getName());
                 } catch (IllegalAccessException e) {
-                    telemetry.addData("New Detection","FAILED TO GET MOTOR");
+                    telemetry.addData("New Detection", "FAILED TO GET MOTOR");
                     throw new RuntimeException(e);
                 }
 
@@ -55,7 +55,7 @@ public class MotorTester extends LinearOpMode {
 
         }
 
-        telemetry.addLine("\n"+motorsList.size()+" motors have been successfully detected, press play to begin testing!");
+        telemetry.addLine("\n" + motorsList.size() + " motors have been successfully detected, press play to begin testing!");
         telemetry.update();
 
         telemetry.setAutoClear(true);
@@ -73,9 +73,9 @@ public class MotorTester extends LinearOpMode {
             double power = -gamepad1.left_stick_y + -gamepad2.left_stick_y;
 
             // Cycle Forward
-            if (nextButton&&!debounce) {
+            if (nextButton && !debounce) {
                 debounce = true;
-                if (index<motorsList.size()-1) {
+                if (index < motorsList.size() - 1) {
                     index++;
                 } else {
                     index = 0;
@@ -83,17 +83,17 @@ public class MotorTester extends LinearOpMode {
             }
 
             // Cycle Backwards
-            if (prevButton&&!debounce) {
+            if (prevButton && !debounce) {
                 debounce = true;
-                if (index>0) {
+                if (index > 0) {
                     index--;
                 } else {
-                    index = motorsList.size()-1;
+                    index = motorsList.size() - 1;
                 }
             }
 
             // Debounce
-            if (!nextButton&&!prevButton&&debounce) {
+            if (!nextButton && !prevButton && debounce) {
                 debounce = false;
             }
 
@@ -105,24 +105,23 @@ public class MotorTester extends LinearOpMode {
             instance.setPower(power);
 
             // Display
-            telemetry.addData("Selected Motor",name);
+            telemetry.addData("Selected Motor", name);
             telemetry.addLine();
-            telemetry.addData("Power",instance.getPower());
-            telemetry.addData("Position",instance.getCurrentPosition());
-            telemetry.addData("Target Position",instance.getTargetPosition());
-            telemetry.addData("Mode",instance.getMode());
-            telemetry.addData("Direction",instance.getDirection());
-            telemetry.addData("Zero Power Behaviour",instance.getZeroPowerBehavior());
+            telemetry.addData("Power", instance.getPower());
+            telemetry.addData("Position", instance.getCurrentPosition());
+            telemetry.addData("Target Position", instance.getTargetPosition());
+            telemetry.addData("Mode", instance.getMode());
+            telemetry.addData("Direction", instance.getDirection());
+            telemetry.addData("Zero Power Behaviour", instance.getZeroPowerBehavior());
             telemetry.addLine();
-            telemetry.addData("Device Name",instance.getDeviceName());
-            telemetry.addData("Type",instance.getMotorType());
-            telemetry.addData("Manufacturer",instance.getManufacturer());
-            telemetry.addData("Version",instance.getVersion());
-            telemetry.addData("Controller",instance.getController());
-            telemetry.addData("Port",instance.getPortNumber());
+            telemetry.addData("Device Name", instance.getDeviceName());
+            telemetry.addData("Type", instance.getMotorType());
+            telemetry.addData("Manufacturer", instance.getManufacturer());
+            telemetry.addData("Version", instance.getVersion());
+            telemetry.addData("Controller", instance.getController());
+            telemetry.addData("Port", instance.getPortNumber());
             telemetry.update();
         }
-
 
 
     }

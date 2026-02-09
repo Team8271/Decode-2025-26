@@ -41,7 +41,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
         //TODO: Not working, Seems Red/Blue flipped
         //resetPose(0, 0, robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180));
 
-        if(robot.readPoseFromFile() != null) {
+        if (robot.readPoseFromFile() != null) {
             startPose = robot.readPoseFromFile();
         }
         resetPose(startPose.getX(), startPose.getY(), startPose.getHeading());
@@ -64,7 +64,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
             double axialControl = -gamepad1.left_stick_y;  // y axis
             double lateralControl = gamepad1.left_stick_x; // x axis
             double yawControl = gamepad1.right_stick_x;    // z axis
-            double throttle = .3+(gamepad1.right_trigger*0.8); // throttle
+            double throttle = .3 + (gamepad1.right_trigger * 0.8); // throttle
             boolean resetFCD = gamepad1.dpad_up; // z axis reset
             boolean enableAimAssist = gamepad1.cross;
             boolean brakeToggle = gamepad1.shareWasPressed();
@@ -77,8 +77,8 @@ public class TheBestTeleEverMade extends LinearOpMode {
             double gamepadHypot = Range.clip(Math.hypot(lateralControl, axialControl), 0, 1);
             double robotRadians = getHeading() + allianceOffset;
             double targetRadians = gamepadRadians + robotRadians;
-            double lateral = Math.sin(targetRadians)*gamepadHypot;
-            double axial = Math.cos(targetRadians)*gamepadHypot;
+            double lateral = Math.sin(targetRadians) * gamepadHypot;
+            double axial = Math.cos(targetRadians) * gamepadHypot;
 
             //robot.aimAssist.headingPIDF.setCoefficient(kP,kI,kD,kF);
 
@@ -96,7 +96,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
 
             if (resetFCD) {
                 double heading = robot.alliance == Config.Alliance.RED ? 0 : Math.toRadians(180);
-                resetPose(follower.getPose().getX(),follower.getPose().getY(),heading);
+                resetPose(follower.getPose().getX(), follower.getPose().getY(), heading);
                 gamepad1.rumble(100);
                 log("FCD Reset");
             }
@@ -115,9 +115,9 @@ public class TheBestTeleEverMade extends LinearOpMode {
                 // Run intensive calculations every delay seconds
                 double delay = 20;
                 if (runtime.milliseconds() > lastAACalcTime + delay) {
-                    double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(),robot.alliance.getPose());
+                    double headingCalc = robot.aimAssist.getHeadingForTarget(follower.getPose(), robot.alliance.getPose());
 
-                    double error = follower.getHeading()-headingCalc;
+                    double error = follower.getHeading() - headingCalc;
 
                     telemetry.addData("AA ERROR", error);
 
@@ -130,15 +130,13 @@ public class TheBestTeleEverMade extends LinearOpMode {
                 }
 
 
-            }
-            else {
+            } else {
                 // Driver 1 Controlling
                 robot.aimAssist.headingPIDF.reset();
 
                 // Drive
                 setTeleOpDrive(axial, lateral, yawControl, throttle, true);
             }
-
 
 
             // Driver 2 Controls
@@ -150,12 +148,11 @@ public class TheBestTeleEverMade extends LinearOpMode {
             //boolean cancelLaunch = gamepad2.dpadLeftWasPressed();
             boolean aimAssistOverrideToggle = gamepad2.dpadRightWasPressed();
 
-            if(aimAssistOverrideToggle) {
-                if(robot.aimAssist.getSimpleStatus()) {
+            if (aimAssistOverrideToggle) {
+                if (robot.aimAssist.getSimpleStatus()) {
                     robot.aimAssist.disableSimpleMode();
                     gamepad2.rumbleBlips(2);
-                }
-                else {
+                } else {
                     robot.aimAssist.enableSimpleMode();
                     gamepad2.rumbleBlips(3);
                 }
@@ -164,22 +161,21 @@ public class TheBestTeleEverMade extends LinearOpMode {
             if (launchOneArtifact) {
                 robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
                 robot.launcherThread.launchOne();
-                gamepad1.rumble(0.8,0.8,125);
-                gamepad2.rumble(0.8,0.8,125);
+                gamepad1.rumble(0.8, 0.8, 125);
+                gamepad2.rumble(0.8, 0.8, 125);
             }
             if (launchThreeArtifacts) {
                 robot.launcherThread.setLauncherVelocity(robot.aimAssist.runPowerCalculation(follower.getPose(), robot.alliance.getPose()));
                 robot.launcherThread.launchThree();
-                gamepad1.rumble(0.8,0.8,125);
-                gamepad2.rumble(0.8,0.8,125);
+                gamepad1.rumble(0.8, 0.8, 125);
+                gamepad2.rumble(0.8, 0.8, 125);
             }
 
             if (intakeAssemblyToggle) {
-                if(!intakeAssemblyIsActive || intakeAssemblyIsReversed) {
+                if (!intakeAssemblyIsActive || intakeAssemblyIsReversed) {
                     robot.runIntakeAssembly();
                     intakeAssemblyIsActive = true;
-                }
-                else {
+                } else {
                     robot.stopIntakeAssembly();
                     intakeAssemblyIsActive = false;
                 }
@@ -192,17 +188,15 @@ public class TheBestTeleEverMade extends LinearOpMode {
             }
 
             //
-            if(robot.intakeMotor.getVelocity() > 70) { // Running
+            if (robot.intakeMotor.getVelocity() > 70) { // Running
                 robot.indicatorLight.setPosition(robot.indicatorLightOn);
-            }
-            else { // Not Running
+            } else { // Not Running
                 robot.indicatorLight.setPosition(robot.indicatorLightOff);
             }
 
 
-
-            if(changeAlliance) {
-                switch(robot.alliance) {
+            if (changeAlliance) {
+                switch (robot.alliance) {
                     case RED:
                         robot.setAlliance(Config.Alliance.BLUE);
                         break;
@@ -220,16 +214,16 @@ public class TheBestTeleEverMade extends LinearOpMode {
             // One Driver Telemetry
             telemetry.addLine(
                     "  Gamepad1:\n" +
-                    "    Axial Control - Left Stick Y\n" +
-                    "    Lateral Control - Left Stick X\n" +
-                    "    Yaw Control - Right Stick X\n" +
-                    "    Throttle - Right Trigger\n" +
-                    "    FCD Reset - dPad Up\n" +
-                    "  Gamepad2:\n" +
-                    "    Launch One Artifact - A\n" +
-                    "    Launch Three Artifacts - Y\n" +
-                    "    Agitator Assembly - B\n" +
-                    "    Simple Mode - DPad-Right");
+                            "    Axial Control - Left Stick Y\n" +
+                            "    Lateral Control - Left Stick X\n" +
+                            "    Yaw Control - Right Stick X\n" +
+                            "    Throttle - Right Trigger\n" +
+                            "    FCD Reset - dPad Up\n" +
+                            "  Gamepad2:\n" +
+                            "    Launch One Artifact - A\n" +
+                            "    Launch Three Artifacts - Y\n" +
+                            "    Agitator Assembly - B\n" +
+                            "    Simple Mode - DPad-Right");
 
             telemetry.update();
             sleep(1); // Save resources
@@ -242,16 +236,16 @@ public class TheBestTeleEverMade extends LinearOpMode {
         double lateralScaled = lateral * throttle;
         double yawScaled = throttleEffectsYaw ? yaw * throttle : yaw;
 
-        double leftFrontPower  = axialScaled + lateralScaled + yawScaled;
+        double leftFrontPower = axialScaled + lateralScaled + yawScaled;
         double rightFrontPower = axialScaled - lateralScaled - yawScaled;
-        double leftBackPower   = axialScaled - lateralScaled + yawScaled;
-        double rightBackPower  = axialScaled + lateralScaled - yawScaled;
+        double leftBackPower = axialScaled - lateralScaled + yawScaled;
+        double rightBackPower = axialScaled + lateralScaled - yawScaled;
 
         double max = Math.max(1.0,
-                    Math.max(Math.abs(leftFrontPower),
-                    Math.max(Math.abs(rightFrontPower),
-                    Math.max(Math.abs(leftBackPower),
-                    Math.abs(rightBackPower)))));
+                Math.max(Math.abs(leftFrontPower),
+                        Math.max(Math.abs(rightFrontPower),
+                                Math.max(Math.abs(leftBackPower),
+                                        Math.abs(rightBackPower)))));
 
         robot.fl.setPower(leftFrontPower / max);
         robot.fr.setPower(rightFrontPower / max);
@@ -264,7 +258,7 @@ public class TheBestTeleEverMade extends LinearOpMode {
     }
 
     private void resetPose(double x, double y, double heading) {
-        follower.setPose(new Pose(x,y,heading));
+        follower.setPose(new Pose(x, y, heading));
     }
 
     private void log(String message) {

@@ -49,7 +49,8 @@ public class AimAssist {
     /**
      * Calculates desired heading to face a position on a pedro-field. <break></break>
      * <b>Simple Mode:</b> returns BLUE=135deg  RED=35deg (In Radians)
-     * @param currentPose Robot current position on the field <b>(must be correct)</b>
+     *
+     * @param currentPose  Robot current position on the field <b>(must be correct)</b>
      * @param targetToFace Pose of the desired position to be facing
      * @return The correct heading in radians to face the target Pose
      * @SimpleMode returns BLUE=135deg  RED=35deg (In Radians)
@@ -73,13 +74,18 @@ public class AimAssist {
         double deltaY = targetY - robotY;
         double targetHeading = Math.atan2(deltaY, deltaX);
 
-        if (Math.toDegrees(targetHeading) < 13) {targetHeading = 1;}
-        if (Math.toDegrees(targetHeading) > 167) {targetHeading = 179;}
+        if (Math.toDegrees(targetHeading) < 13) {
+            targetHeading = 1;
+        }
+        if (Math.toDegrees(targetHeading) > 167) {
+            targetHeading = 179;
+        }
         return targetHeading;
     }
 
     /**
      * Wraps angles (Radians).
+     *
      * @param angle Radian angle.
      * @return Normalized angle between -pi and pi.
      */
@@ -162,13 +168,13 @@ public class AimAssist {
      */
     public double runPowerCalculation(Pose currentPose, Pose targetPose) {
 
-        if(simpleMode) {
+        if (simpleMode) {
             return robot.overrideLauncherVel;
         }
 
         // Distance from target represented as x
         double x = robot.aimAssist.getPoseDistance(currentPose, targetPose);
-        double idealLauncherVelocity = (0.0182942*x*x)+(1.3243*x)+1130.37088; // Not using Math.pow for speed sake
+        double idealLauncherVelocity = (0.0182942 * x * x) + (1.3243 * x) + 1130.37088; // Not using Math.pow for speed sake
         log("Launch Velocity Calculation: " + Math.round(idealLauncherVelocity));
 
         return idealLauncherVelocity;

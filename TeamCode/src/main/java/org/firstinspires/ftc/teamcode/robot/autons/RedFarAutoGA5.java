@@ -164,12 +164,12 @@ public class RedFarAutoGA5 extends OpMode {
                 break;
             case 61: // Wait for gate
                 if (!follower.isBusy()) {
-                    gateEndTime = opmodeTimer.getElapsedTimeSeconds()+1;
+                    gateEndTime = opmodeTimer.getElapsedTimeSeconds() + 1;
                     setPathState(7);
                 }
                 break;
             case 7: // Follow openGate_to_closeScore
-                if (!follower.isBusy() && opmodeTimer.getElapsedTimeSeconds()>gateEndTime) {
+                if (!follower.isBusy() && opmodeTimer.getElapsedTimeSeconds() > gateEndTime) {
                     follower.followPath(openGate_to_closeScore, true);
                     setPathState(8);
                 }
@@ -297,7 +297,8 @@ public class RedFarAutoGA5 extends OpMode {
     }
 
     @Override
-    public void init_loop() {}
+    public void init_loop() {
+    }
 
     @Override
     public void start() {

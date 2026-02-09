@@ -591,10 +591,14 @@ public class AutoMaker {
     Config robot;
     Follower follower;
 
-    public AutoMaker(Config robot, Follower follower){this.robot = robot; this.follower = follower;}
+    public AutoMaker(Config robot, Follower follower) {
+        this.robot = robot;
+        this.follower = follower;
+    }
 
     /// AutoCommand interface
-    public interface AutoCommand {}
+    public interface AutoCommand {
+    }
 
 
     /// Pose Wrapper
@@ -666,7 +670,9 @@ public class AutoMaker {
         IDLE
     }
 
-    public ActionCmd A(ActionCmd actionCmd) {return actionCmd;}
+    public ActionCmd A(ActionCmd actionCmd) {
+        return actionCmd;
+    }
 
     /// Action executor
     private void runAction(ActionCmd action) {
@@ -760,8 +766,7 @@ public class AutoMaker {
                 ));
 
                 lastPose = nextPose; // carry forward
-            }
-            else {
+            } else {
                 // ActionCmd or PathChainCmd
                 commandList.add(cmd);
             }
@@ -797,7 +802,7 @@ public class AutoMaker {
 
         List<AutoCommand> cmds = bSeq.getCommands();
 
-        PoseCmd startPoseCmd = (PoseCmd)cmds.get(0);
+        PoseCmd startPoseCmd = (PoseCmd) cmds.get(0);
         Pose startPose = poseCmdToPose(startPoseCmd);
         String startPoseString = poseToString(startPose);
 
@@ -1086,20 +1091,17 @@ public class AutoMaker {
                         "[AMaker] %02d: PoseCmd (%.1f, %.1f, %.1f)",
                         i, p.getX(), p.getY(), Math.toDegrees(p.getHeading())
                 ));
-            }
-            else if (cmd instanceof PathChainCmd) {
+            } else if (cmd instanceof PathChainCmd) {
                 robot.log(String.format(
                         "[AMaker] %02d: PathChainCmd (%s)",
                         i, ((PathChainCmd) cmd).pathChain
                 ));
-            }
-            else if (cmd instanceof ActionCmd) {
+            } else if (cmd instanceof ActionCmd) {
                 robot.log(String.format(
                         "[AMaker] %02d: ActionCmd (%s)",
                         i, ((ActionCmd) cmd).name()
                 ));
-            }
-            else {
+            } else {
                 robot.log(String.format(
                         "[AMaker] %02d: UNKNOWN CMD (%s)",
                         i, cmd.getClass().getSimpleName()
