@@ -1,9 +1,8 @@
-package org.firstinspires.ftc.teamcode.robot;
+package org.firstinspires.ftc.teamcode.util.tuners;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -17,6 +16,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.robot.configuration.Config;
+import org.firstinspires.ftc.teamcode.util.Poses;
 
 @TeleOp(name = "!!FlywheelTuner!!")
 public class FlywheelPFTuner extends OpMode {
@@ -25,7 +26,7 @@ public class FlywheelPFTuner extends OpMode {
     Config robot;
     private Follower follower;
 
-    private final Pose startPose = new Pose(88, 12, Math.toRadians(90)); // Start Pose of robot.
+    private final Pose startPose = Poses.Blue.farStart; // Start Pose of robot.
 
     public double highVelocity = 1500;
     public double lowVelocity = 900;
@@ -39,10 +40,9 @@ public class FlywheelPFTuner extends OpMode {
 
     int stepIndex = 1;
 
-    Limelight3A limelight;
     LLResult result;
     boolean valid;
-    Pose3D blankPose = new Pose3D(new Position(), new YawPitchRollAngles(AngleUnit.RADIANS,0,0,0,0));
+    Pose3D blankPose = new Pose3D(new Position(), new YawPitchRollAngles(AngleUnit.RADIANS, 0, 0, 0, 0));
     Pose3D lLCurPose = blankPose;
     Pose3D lLCurPoseMT2 = blankPose;
     Pose3D lLLastPose = blankPose;
@@ -53,23 +53,23 @@ public class FlywheelPFTuner extends OpMode {
             activeLeftKickerPosition = 0, activeRightKickerPosition = 1 - activeLeftKickerPosition,
             intakeLimServerActivePosition = 1, intakeLimServoInactivePosition = 0.5;
 
-    private double desiredLeftKickerPosition = storeLeftKickerPosition,
-            desiredIntakeLimiterPosition = intakeLimServerActivePosition;
-
     private Servo leftKickerServo, rightKickerServo, intakeLimServo;
 
     @Override
     public void init() {
 
         robot = new Config(this);
-        robot.aimAssistInit();
-        robot.alliance = Config.Alliance.RED;
+        //robot.aimAssistInit();
+        robot.init();
 
-        initLL();
+        robot.alliance = Config.Alliance.BLUE;
+
+        //initLL();
 
         follower = Constants.createFollower(hardwareMap);
         follower.setPose(startPose);
         follower.update();
+
 
         // Modified Robot Launcher Motor
         flywheelMotor = hardwareMap.get(DcMotorEx.class, "launcher");
@@ -101,6 +101,57 @@ public class FlywheelPFTuner extends OpMode {
     @Override
     public void loop() {
         follower.update();
+
+        /* Stolen Code from Examples
+        // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
+        double axial   = -gamepad1.left_stick_y;  // Note: pushing stick forward gives negative value
+        double lateral =  gamepad1.left_stick_x;
+        double yaw     =  gamepad1.right_stick_x;
+
+        // Combine the joystick requests for each axis-motion to determine each wheel's power.
+        // Set up a variable for each drive wheel to save the power level for telemetry.
+        double frontLeftPower  = axial + lateral + yaw;
+        double frontRightPower = axial - lateral - yaw;
+        double backLeftPower   = axial - lateral + yaw;
+        double backRightPower  = axial + lateral - yaw;
+
+        // Normalize the values so no wheel power exceeds 100%
+        // This ensures that the robot maintains the desired motion.
+        double max = Math.max(Math.abs(frontLeftPower), Math.abs(frontRightPower));
+        max = Math.max(max, Math.abs(backLeftPower));
+        max = Math.max(max, Math.abs(backRightPower));
+
+        if (max > 1.0) {
+            frontLeftPower  /= max;
+            frontRightPower /= max;
+            backLeftPower   /= max;
+            backRightPower  /= max;
+        }
+
+        // This is test code:
+        //
+        // Uncomment the following code to test your motor directions.
+        // Each button should make the corresponding motor run FORWARD.
+        //   1) First get all the motors to take to correct positions on the robot
+        //      by adjusting your Robot Configuration if necessary.
+        //   2) Then make sure they run in the correct direction by modifying the
+        //      the setDirection() calls above.
+        // Once the correct motors move in the correct direction re-comment this code.
+
+            /*
+            frontLeftPower  = gamepad1.x ? 1.0 : 0.0;  // X gamepad
+            backLeftPower   = gamepad1.a ? 1.0 : 0.0;  // A gamepad
+            frontRightPower = gamepad1.y ? 1.0 : 0.0;  // Y gamepad
+            backRightPower  = gamepad1.b ? 1.0 : 0.0;  // B gamepad
+            /
+
+        // Send calculated power to wheels
+        robot.fl.setPower(frontLeftPower);
+        robot.fr.setPower(frontRightPower);
+        robot.bl.setPower(backLeftPower);
+        robot.br.setPower(backRightPower);
+
+        // End of stolen code*/
 
         if (gamepad1.yWasPressed()) {
             if (curTargetVelocity == highVelocity) {
@@ -163,7 +214,7 @@ public class FlywheelPFTuner extends OpMode {
         double curVelocity = flywheelMotor.getVelocity();
         double error = curTargetVelocity - curVelocity;
 
-        double distance = robot.aimAssist.getPoseDistance(follower.getPose(),robot.alliance.getPose());
+        double distance = robot.aimAssist.getPoseDistance(follower.getPose(), robot.alliance.getPose());
 
         updateLLResults();
 
@@ -204,7 +255,6 @@ public class FlywheelPFTuner extends OpMode {
     }
 
     public void activateKicker() {
-        desiredLeftKickerPosition = activeLeftKickerPosition;
         leftKickerServo.setPosition(activeLeftKickerPosition);
         rightKickerServo.setPosition(activeRightKickerPosition);
     }
@@ -214,20 +264,12 @@ public class FlywheelPFTuner extends OpMode {
     }
 
     public void storeKicker() {
-        desiredLeftKickerPosition = storeLeftKickerPosition;
         leftKickerServo.setPosition(storeLeftKickerPosition);
         rightKickerServo.setPosition(storeRightKickerPosition);
     }
 
-    public void initLL() {
-        limelight = hardwareMap.get(Limelight3A.class, "limelight");
-        limelight.setPollRateHz(11);
-        limelight.start();
-        limelight.pipelineSwitch(0);
-    }
-
     public void updateLLResults() {
-        result = limelight.getLatestResult();
+        result = null;//limelight.getLatestResult();
 
         if (result != null && result.isValid()) {
             valid = true;
@@ -235,6 +277,8 @@ public class FlywheelPFTuner extends OpMode {
             lLCurPoseMT2 = result.getBotpose_MT2();
             lLLastPose = lLCurPose;
             lLLastPoseMT2 = lLCurPoseMT2;
-        } else { valid = false; }
+        } else {
+            valid = false;
+        }
     }
 }
