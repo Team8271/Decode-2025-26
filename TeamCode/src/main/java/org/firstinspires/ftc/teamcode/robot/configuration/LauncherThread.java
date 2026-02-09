@@ -75,7 +75,7 @@ public class LauncherThread extends Thread {
                 break;
             }
             
-            if (!robot.opModeisActive()) {
+            if (!robot.opModeIsActive()) {
                 log("OpMode stopped during velocity wait");
                 break;
             }

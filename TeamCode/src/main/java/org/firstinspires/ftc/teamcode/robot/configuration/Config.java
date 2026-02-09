@@ -282,7 +282,7 @@ public class Config {
         odometer.resetTo(0, 0, 0);
     }
 
-    public boolean opModeisActive() {
+    public boolean opModeIsActive() {
         if (usingLinearOpMode) {
             return linearOpMode.opModeIsActive();
         } else {
