@@ -8,10 +8,13 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.robot.configuration.Config;
 
 import org.firstinspires.ftc.teamcode.util.Poses.Blue;
-import org.firstinspires.ftc.teamcode.util.AutoMaker;
 
-@TeleOp(name = "Auto Maker")
-public class test extends LinearOpMode {
+/**
+ * A class used to auto build pedro pathing autons. It outputs to the robot in the generated
+ * autons folder.
+ */
+@TeleOp(name = "Construct Auto")
+public class AutoConstructor extends LinearOpMode {
 
     public void runOpMode() {
 
