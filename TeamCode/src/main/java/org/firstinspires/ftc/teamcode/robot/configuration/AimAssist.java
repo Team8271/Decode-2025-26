@@ -286,7 +286,7 @@ public class AimAssist {
         // Distance from target represented as x
         double x = robot.aimAssist.getPoseDistance(currentPose, targetPose);
         double idealLauncherVelocity = (0.0182942*x*x)+(1.3243*x)+1130.37088; // Not using Math.pow for speed sake
-        log("Launch Velocity Calculation: " + Math.round(robot.idealLauncherVelocity));
+        log("Launch Velocity Calculation: " + Math.round(idealLauncherVelocity));
 
         return idealLauncherVelocity;
 

@@ -236,10 +236,10 @@ public class Config {
         leftBrake.setPosition(brakeOff);
         rightBrake.setPosition(brakeOff);
 
-        redLED = hwMap.get(DigitalChannel.class, "red");
-        greenLED = hwMap.get(DigitalChannel.class, "green");
-        redLED.setMode(DigitalChannel.Mode.OUTPUT);
-        greenLED.setMode(DigitalChannel.Mode.OUTPUT);
+        //redLED = hwMap.get(DigitalChannel.class, "red");
+        //greenLED = hwMap.get(DigitalChannel.class, "green");
+        //redLED.setMode(DigitalChannel.Mode.OUTPUT);
+        //greenLED.setMode(DigitalChannel.Mode.OUTPUT);
 
         // Light
         indicatorLight = hwMap.get(Servo.class, "bigStupidLight");
@@ -591,11 +591,11 @@ public class Config {
     public void toggleBrakes() {
         if (brakesActive) {
             deactivateBrakes();
-            setIndicatorLightGreen();
+            //setIndicatorLightGreen();
         }
         else {
             activateBrakes();
-            setIndicatorLightRed();
+            //setIndicatorLightRed();
         }
     }
 
